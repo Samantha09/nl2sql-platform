@@ -1,0 +1,39 @@
+# Compiled / build
+target/
+build/
+dist/
+node_modules/
+*.class
+*.jar
+*.war
+*.ear
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+.env.local
+
+# Maven
+.mvn/
+!/.mvn/wrapper/maven-wrapper.properties
+
+# Docker
+docker-compose.override.yml
+
+# Misc
+*.tmp
+*.temp
