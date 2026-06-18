@@ -69,9 +69,11 @@ public class QueryService {
             condition = "#request.conversationId != null")
     void saveHistory(QueryRequest request, QueryResult result, String error) {
         QueryHistory h = new QueryHistory();
-        h.setConversationId(request.getConversationId());
-        h.setUserId(request.getUserId());
-        h.setDataSourceId(request.getDataSourceId());
+        // 非空字段兜底：匿名/无会话/未指定数据源时填默认值，避免违反非空约束
+        h.setConversationId(request.getConversationId() != null
+                ? request.getConversationId() : UUID.randomUUID().toString());
+        h.setUserId(request.getUserId() != null ? request.getUserId() : 0L);
+        h.setDataSourceId(request.getDataSourceId() != null ? request.getDataSourceId() : 0L);
         h.setNaturalLanguage(request.getNaturalLanguage());
         h.setGeneratedSql(result.getSql());
         h.setSqlExecuted(result.getSql());
