@@ -1,5 +1,6 @@
 package com.nl2sql.common;
 
+import com.nl2sql.common.enums.IResultCode;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -33,4 +34,10 @@ public class R<T> implements Serializable {
         r.setMessage(message);
         return r;
     }
+
+    /** 基于结果码构造错误响应，message 取国际化文案（按当前 locale） */
+    public static <T> R<T> error(IResultCode resultCode) {
+        return error(resultCode.getCode(), resultCode.getMessage());
+    }
 }
+
