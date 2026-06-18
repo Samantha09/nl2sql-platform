@@ -35,33 +35,55 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 
 .app { display: flex; height: 100vh; overflow: hidden; }
 
-/* ---------- 窄导航栏 ---------- */
+/* ---------- 导航栏（可展开/收起） ---------- */
 .rail {
   width: 58px; flex-shrink: 0; background: var(--bg-rail); border-right: 1px solid var(--line);
   display: flex; flex-direction: column; align-items: center; padding: 14px 0 12px; gap: 4px;
+  transition: width 0.16s ease;
 }
+.rail.open { width: 208px; align-items: stretch; padding: 14px 10px 12px; }
+.rail-top { display: flex; align-items: center; margin-bottom: 10px; }
+.rail.open .rail-top { gap: 9px; padding: 0 4px; }
 .rail-logo {
-  width: 34px; height: 34px; border-radius: 9px;
+  width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
   background: linear-gradient(135deg, var(--emerald), var(--emerald-deep));
-  display: grid; place-items: center; color: #0b3b29; font-weight: 700; font-size: 17px; margin-bottom: 10px;
+  display: grid; place-items: center; color: #0b3b29; font-weight: 700; font-size: 17px;
 }
+.rail:not(.open) .rail-top { flex-direction: column; gap: 8px; }
+.rail-brand { font-weight: 600; font-size: 14px; color: var(--ink); white-space: nowrap; flex: 1; }
+.rail-toggle {
+  width: 28px; height: 28px; border-radius: 7px; flex-shrink: 0; display: grid; place-items: center;
+  color: var(--ink-3); transition: 0.12s;
+}
+.rail-toggle svg { width: 17px; height: 17px; }
+.rail-toggle:hover { background: var(--bg-soft); color: var(--ink); }
 .rail-item {
   width: 40px; height: 40px; border-radius: 9px; display: grid; place-items: center;
   color: var(--ink-3); position: relative; transition: 0.12s;
 }
+.rail.open .rail-item {
+  width: 100%; height: 38px; grid-template-columns: 40px 1fr; place-items: center start; padding-right: 10px;
+}
 .rail-item svg { width: 19px; height: 19px; }
+.rail-label { font-size: 13px; white-space: nowrap; }
 .rail-item:hover { background: var(--bg-soft); color: var(--ink); }
 .rail-item.active { color: var(--emerald); }
+.rail.open .rail-item.active { background: var(--bg-soft); }
 .rail-item.active::before {
   content: ""; position: absolute; left: -14px; top: 9px; bottom: 9px; width: 3px; border-radius: 3px; background: var(--emerald);
 }
-.rail-item:hover::after {
+.rail.open .rail-item.active::before { left: 0; }
+/* 仅窄栏显示悬浮 tooltip；展开栏已有文字标签 */
+.rail:not(.open) .rail-item:hover::after {
   content: attr(data-tip); position: absolute; left: calc(100% + 10px); top: 50%; transform: translateY(-50%);
   background: #000; color: #fff; padding: 5px 10px; border-radius: 6px; font-size: 12px; white-space: nowrap;
   z-index: 60; pointer-events: none; border: 1px solid var(--line-2);
 }
 .rail-spacer { flex: 1; }
-.rail-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--emerald); box-shadow: 0 0 0 3px rgba(62, 207, 142, 0.18); }
+.rail-foot { display: flex; align-items: center; gap: 9px; padding: 0 4px; }
+.rail:not(.open) .rail-foot { justify-content: center; }
+.rail-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: var(--emerald); box-shadow: 0 0 0 3px rgba(62, 207, 142, 0.18); }
+.rail-status { font-size: 12px; color: var(--ink-3); white-space: nowrap; }
 
 /* ---------- 对象树（常驻） ---------- */
 .objtree {
@@ -200,4 +222,52 @@ svg.chart { width: 100%; height: 230px; display: block; }
   background: var(--bg-2); border: 1px solid var(--line-2); color: var(--ink);
   padding: 10px 18px; border-radius: 8px; font-size: 13px; z-index: 99;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); animation: fade 0.2s ease;
+}
+
+/* ============ 响应式：平板 ============ */
+@media (max-width: 1024px) {
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .grid-2 { grid-template-columns: 1fr; }
+  .result-grid { grid-template-columns: 1fr; }
+  .charts-grid { grid-template-columns: 1fr; }
+  .view { padding: 18px; }
+}
+
+/* ============ 响应式：手机 ============ */
+@media (max-width: 640px) {
+  /* 侧边菜单强制收为窄图标栏，避免占用过多横向空间 */
+  .rail.open { width: 58px; align-items: center; padding: 14px 0 12px; }
+  .rail.open .rail-brand,
+  .rail.open .rail-label,
+  .rail.open .rail-status { display: none; }
+  .rail.open .rail-top { flex-direction: column; gap: 8px; padding: 0; }
+  .rail.open .rail-item { width: 40px; height: 40px; grid-template-columns: none; place-items: center; padding-right: 0; }
+  .rail.open .rail-item.active::before { left: -14px; }
+  .rail.open .rail-foot { justify-content: center; padding: 0; }
+
+  /* 对象树收窄 */
+  .objtree { width: 190px; }
+
+  /* 内容区与顶栏收紧间距 */
+  .view { padding: 14px; }
+  .topbar { padding: 0 14px; height: 52px; }
+  .topbar .title { font-size: 14px; }
+  .topbar .title small { display: none; }
+
+  /* 顶栏只保留连接状态与刷新按钮，隐藏次要文字 */
+  .topbar .meta { gap: 8px; }
+  .topbar .meta > span:not(.pill) { display: none; }
+
+  /* KPI 单列 */
+  .kpi-grid { grid-template-columns: 1fr; gap: 12px; }
+  .kpi .value { font-size: 26px; }
+
+  /* 提问栏纵向堆叠，按钮占满宽度便于点按 */
+  .askbar { flex-direction: column; }
+  .askbar .btn-primary { justify-content: center; padding: 12px; }
+
+  .card { padding: 14px; }
+
+  /* 宽表格横向滚动，避免撑破布局 */
+  table.data { display: block; overflow-x: auto; white-space: nowrap; }
 }

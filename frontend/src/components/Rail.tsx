@@ -12,17 +12,29 @@ const TIPS: Record<ViewKey, string> = { overview: '概览', schema: '表结构',
 const ORDER: ViewKey[] = ['overview', 'schema', 'query', 'charts'];
 
 export default function Rail() {
-  const { view, go } = useStore();
+  const { view, go, railOpen, toggleRail } = useStore();
   return (
-    <aside className="rail">
-      <div className="rail-logo">◆</div>
+    <aside className={'rail' + (railOpen ? ' open' : '')}>
+      <div className="rail-top">
+        <div className="rail-logo">◆</div>
+        {railOpen && <span className="rail-brand">AI 数据库助手</span>}
+        <button className="rail-toggle" onClick={toggleRail} title={railOpen ? '收起菜单' : '展开菜单'}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            {railOpen ? <path d="M15 18l-6-6 6-6" /> : <path d="M9 6l6 6-6 6" />}
+          </svg>
+        </button>
+      </div>
       {ORDER.map(v => (
         <button key={v} className={'rail-item' + (view === v ? ' active' : '')} data-tip={TIPS[v]} onClick={() => go(v)}>
           {ICONS[v]}
+          {railOpen && <span className="rail-label">{TIPS[v]}</span>}
         </button>
       ))}
       <div className="rail-spacer" />
-      <span className="rail-dot" title="mock 模式" />
+      <div className="rail-foot">
+        <span className="rail-dot" title="mock 模式" />
+        {railOpen && <span className="rail-status">mock 模式</span>}
+      </div>
     </aside>
   );
 }

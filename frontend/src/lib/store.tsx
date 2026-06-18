@@ -16,6 +16,8 @@ interface StoreCtx {
   selectMode: (n: string, m: SchemaMode) => void;
   tree: TreeState;
   toggleNode: (k: 'db' | 'schema') => void;
+  railOpen: boolean;
+  toggleRail: () => void;
 }
 
 const Ctx = createContext<StoreCtx>(null as unknown as StoreCtx);
@@ -24,6 +26,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [view, setView] = useState<ViewKey>('overview');
   const [curTable, setCurTable] = useState('orders');
   const [curMode, setCurMode] = useState<SchemaMode>('struct');
+  const [railOpen, setRailOpen] = useState(true);
   const [tree, setTree] = useState<TreeState>({
     openDb: true,
     openSchema: true,
@@ -61,8 +64,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const toggleNode = (k: 'db' | 'schema') =>
     setTree(t => (k === 'db' ? { ...t, openDb: !t.openDb } : { ...t, openSchema: !t.openSchema }));
 
+  const toggleRail = () => setRailOpen(o => !o);
+
   return (
-    <Ctx.Provider value={{ view, go, curTable, curMode, selectTable, selectMode, tree, toggleNode }}>
+    <Ctx.Provider value={{ view, go, curTable, curMode, selectTable, selectMode, tree, toggleNode, railOpen, toggleRail }}>
       {children}
     </Ctx.Provider>
   );

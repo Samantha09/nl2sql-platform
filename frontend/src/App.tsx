@@ -12,7 +12,7 @@ export default function App() {
   return (
     <div className="app">
       <Rail />
-      <ObjectTree />
+      {view === 'schema' && <ObjectTree />}
       <main className="main">
         <Topbar />
         <section className="view">
