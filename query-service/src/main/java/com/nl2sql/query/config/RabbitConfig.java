@@ -1,55 +1,39 @@
 package com.nl2sql.query.config;
 
-import org.springframework.amqp.core.*;
+import com.nl2sql.common.mq.MqConst;
+import com.nl2sql.common.mq.MqTopology;
+import org.springframework.amqp.core.Declarables;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * query-service 生产 nl2sql 事件、消费 sql.ready 事件、内部流转 result.ready。
+ * 拓扑常量统一引用 {@link MqConst}，通过 {@link MqTopology} 声明带死信的完整拓扑。
+ */
 @Configuration
 public class RabbitConfig {
 
-    public static final String NL2SQL_EXCHANGE = "nl2sql.exchange";
-    public static final String NL2SQL_ROUTING_KEY = "nl2sql.event";
-
-    public static final String SQL_READY_QUEUE = "sql.ready.queue";
-    public static final String SQL_READY_EXCHANGE = "sql.ready.exchange";
-    public static final String SQL_READY_ROUTING_KEY = "sql.ready.event";
-
-    public static final String RESULT_READY_QUEUE = "result.ready.queue";
-    public static final String RESULT_READY_EXCHANGE = "result.ready.exchange";
-    public static final String RESULT_READY_ROUTING_KEY = "result.ready.event";
-
+    /** NL→SQL 请求交换机（生产）+ 死信拓扑 */
     @Bean
-    public TopicExchange nl2sqlExchange() {
-        return new TopicExchange(NL2SQL_EXCHANGE);
+    public Declarables nl2sqlTopology() {
+        return MqTopology.topologyWithDlq(
+                MqConst.Nl2Sql.EXCHANGE, MqConst.Nl2Sql.QUEUE, MqConst.Nl2Sql.ROUTING_KEY,
+                MqConst.Nl2Sql.DLX, MqConst.Nl2Sql.DLQ, MqConst.Nl2Sql.DLK);
     }
 
+    /** SQL 生成完成队列（消费）+ 死信拓扑 */
     @Bean
-    public Queue sqlReadyQueue() {
-        return new Queue(SQL_READY_QUEUE, true);
+    public Declarables sqlReadyTopology() {
+        return MqTopology.topologyWithDlq(
+                MqConst.SqlReady.EXCHANGE, MqConst.SqlReady.QUEUE, MqConst.SqlReady.ROUTING_KEY,
+                MqConst.SqlReady.DLX, MqConst.SqlReady.DLQ, MqConst.SqlReady.DLK);
     }
 
+    /** 结果待可视化队列（内部流转）+ 死信拓扑 */
     @Bean
-    public DirectExchange sqlReadyExchange() {
-        return new DirectExchange(SQL_READY_EXCHANGE);
-    }
-
-    @Bean
-    public Binding sqlReadyBinding(Queue sqlReadyQueue, DirectExchange sqlReadyExchange) {
-        return BindingBuilder.bind(sqlReadyQueue).to(sqlReadyExchange).with(SQL_READY_ROUTING_KEY);
-    }
-
-    @Bean
-    public Queue resultReadyQueue() {
-        return new Queue(RESULT_READY_QUEUE, true);
-    }
-
-    @Bean
-    public DirectExchange resultReadyExchange() {
-        return new DirectExchange(RESULT_READY_EXCHANGE);
-    }
-
-    @Bean
-    public Binding resultReadyBinding(Queue resultReadyQueue, DirectExchange resultReadyExchange) {
-        return BindingBuilder.bind(resultReadyQueue).to(resultReadyExchange).with(RESULT_READY_ROUTING_KEY);
+    public Declarables resultReadyTopology() {
+        return MqTopology.topologyWithDlq(
+                MqConst.ResultReady.EXCHANGE, MqConst.ResultReady.QUEUE, MqConst.ResultReady.ROUTING_KEY,
+                MqConst.ResultReady.DLX, MqConst.ResultReady.DLQ, MqConst.ResultReady.DLK);
     }
 }

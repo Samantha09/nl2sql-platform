@@ -1,0 +1,2 @@
+com.nl2sql.common.cache.CacheConfig
+com.nl2sql.common.mq.RabbitJsonConfig

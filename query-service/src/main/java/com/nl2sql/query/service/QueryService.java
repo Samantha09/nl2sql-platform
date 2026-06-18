@@ -1,13 +1,16 @@
 package com.nl2sql.query.service;
 
+import com.nl2sql.common.cache.CacheNames;
 import com.nl2sql.common.event.NL2SQLEvent;
-import com.nl2sql.query.config.RabbitConfig;
+import com.nl2sql.common.mq.MqConst;
 import com.nl2sql.query.dto.QueryRequest;
 import com.nl2sql.query.dto.QueryResult;
 import com.nl2sql.query.entity.QueryHistory;
 import com.nl2sql.query.repository.QueryHistoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -28,7 +31,7 @@ public class QueryService {
         event.setConversationId(request.getConversationId());
         event.setTimestamp(System.currentTimeMillis());
 
-        rabbitTemplate.convertAndSend(RabbitConfig.NL2SQL_EXCHANGE, RabbitConfig.NL2SQL_ROUTING_KEY, event);
+        rabbitTemplate.convertAndSend(MqConst.Nl2Sql.EXCHANGE, MqConst.Nl2Sql.ROUTING_KEY, event);
 
         // 骨架阶段：同步返回 Mock 结果
         QueryResult result = new QueryResult();
@@ -55,11 +58,16 @@ public class QueryService {
         return result;
     }
 
+    /** 按会话查历史，结果缓存到 Redis；空会话不缓存避免无意义条目 */
+    @Cacheable(cacheNames = CacheNames.QUERY_HISTORY, key = "#conversationId", unless = "#conversationId == null")
     public List<QueryHistory> history(String conversationId) {
         return historyRepository.findByConversationIdOrderByCreatedAtDesc(conversationId);
     }
 
-    private void saveHistory(QueryRequest request, QueryResult result, String error) {
+    /** 写入历史后清除该会话缓存，保证下次读取最新 */
+    @CacheEvict(cacheNames = CacheNames.QUERY_HISTORY, key = "#request.conversationId",
+            condition = "#request.conversationId != null")
+    void saveHistory(QueryRequest request, QueryResult result, String error) {
         QueryHistory h = new QueryHistory();
         h.setConversationId(request.getConversationId());
         h.setUserId(request.getUserId());

@@ -13,10 +13,26 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: 6379
   cloud:
     nacos:
       discovery:
         server-addr: ${NACOS_SERVER:localhost:8848}
+
+# 缓存配置（详见 common CacheProperties）
+nl2sql:
+  cache:
+    key-prefix: "nl2sql:"
+    default-ttl: 10m
+    null-ttl: 60s
+    cache-null-values: true
+    ttls:
+      ds:list: 5m
+      schema:table: 30m
+      schema:tables: 10m
 
 management:
   endpoints:

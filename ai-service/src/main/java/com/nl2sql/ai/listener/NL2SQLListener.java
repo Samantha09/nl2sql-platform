@@ -1,9 +1,9 @@
 package com.nl2sql.ai.listener;
 
-import com.nl2sql.ai.config.RabbitConfig;
 import com.nl2sql.ai.service.MockLLMService;
 import com.nl2sql.common.event.NL2SQLEvent;
 import com.nl2sql.common.event.SQLReadyEvent;
+import com.nl2sql.common.mq.MqConst;
 import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -18,7 +18,7 @@ public class NL2SQLListener {
     private final MockLLMService mockLLMService;
     private final RabbitTemplate rabbitTemplate;
 
-    @RabbitListener(queues = RabbitConfig.NL2SQL_QUEUE)
+    @RabbitListener(queues = MqConst.Nl2Sql.QUEUE)
     public void onNL2SQLEvent(NL2SQLEvent event) {
         String sql = mockLLMService.convert(event.getNaturalLanguage(), event.getDataSourceId());
 
@@ -29,6 +29,6 @@ public class NL2SQLListener {
         ready.setSqlValid(true);
         ready.setTimestamp(System.currentTimeMillis());
 
-        rabbitTemplate.convertAndSend("sql.ready.exchange", "sql.ready.event", ready);
+        rabbitTemplate.convertAndSend(MqConst.SqlReady.EXCHANGE, MqConst.SqlReady.ROUTING_KEY, ready);
     }
 }

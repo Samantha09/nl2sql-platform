@@ -27,6 +27,21 @@ spring:
       discovery:
         server-addr: ${NACOS_SERVER:localhost:8848}
 
+# 缓存 + MQ 配置（详见 common CacheProperties / MqProperties）
+nl2sql:
+  cache:
+    key-prefix: "nl2sql:"
+    default-ttl: 10m
+    null-ttl: 60s
+    cache-null-values: true
+    ttls:
+      query:history: 2m
+  mq:
+    max-retries: 3
+    initial-interval: 1000
+    multiplier: 2.0
+    max-interval: 10000
+
 management:
   endpoints:
     web:
