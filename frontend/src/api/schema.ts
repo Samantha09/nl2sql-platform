@@ -1,56 +1,26 @@
-import request from './request'
+import { http } from './http';
+import { DataSourceConfig } from './types';
 
-export interface DataSource {
-  id: number
-  name: string
-  type: 'mysql' | 'clickhouse' | 'postgresql'
-  host: string
-  port: number
-  databaseName: string
-}
+/** 数据源列表 */
+export const listDataSources = () =>
+  http.get<DataSourceConfig[]>('/schema/datasource/list');
 
-export interface TableInfo {
-  name: string
-  comment?: string
-  rowCount?: number
-}
+/** 新增数据源 */
+export const addDataSource = (config: Partial<DataSourceConfig>) =>
+  http.post<DataSourceConfig>('/schema/datasource', config);
 
-export interface ColumnInfo {
-  name: string
-  type: string
-  comment?: string
-  nullable: boolean
-  defaultValue?: string
-  isPrimaryKey: boolean
-}
+/** 删除数据源 */
+export const deleteDataSource = (id: number) =>
+  http.del<void>(`/schema/datasource/${id}`);
 
-export interface IndexInfo {
-  name: string
-  columns: string[]
-  unique: boolean
-}
+/** 扫描表列表 */
+export const scanTables = (datasourceId: number) =>
+  http.post<string[]>(`/schema/scan/${datasourceId}`);
 
-export interface ForeignKeyInfo {
-  name: string
-  column: string
-  referencedTable: string
-  referencedColumn: string
-}
+/** 表列表 */
+export const listTables = (datasourceId: number) =>
+  http.get<string[]>(`/schema/${datasourceId}/tables`);
 
-export interface TableSchema {
-  tableName: string
-  tableComment?: string
-  columns: ColumnInfo[]
-  primaryKeys: string[]
-  indexes: IndexInfo[]
-  foreignKeys?: ForeignKeyInfo[]
-}
-
-export const listDataSources = () => request.get('/schema/datasource/list')
-export const addDataSource = (data: Partial<DataSource>) => request.post('/schema/datasource', data)
-export const scanTables = (id: number) => request.post(`/schema/scan/${id}`)
-export const getTableDetail = (dsId: number, tableName: string) =>
-  request.get(`/schema/${dsId}/tables/${tableName}`)
-
-// 明天对接真实接口时使用
-export const listTables = (dsId: number) => request.get(`/schema/${dsId}/tables`)
+/** 表结构详情 */
+export const getTableDetail = (datasourceId: number, tableName: string) =>
+  http.get<unknown>(`/schema/${datasourceId}/tables/${tableName}`);

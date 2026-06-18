@@ -1,25 +1,22 @@
 {
-  "name": "nl2sql-frontend",
+  "name": "ai-db-frontend",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc && vite build",
+    "build": "tsc -b && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
-    "vue": "^3.4.27",
-    "vue-router": "^4.3.2",
-    "pinia": "^2.1.7",
-    "element-plus": "^2.7.3",
-    "axios": "^1.7.2",
-    "echarts": "^5.5.0"
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^5.0.4",
-    "typescript": "^5.4.5",
-    "vite": "^5.2.11",
-    "vue-tsc": "^2.0.19"
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11"
   }
 }
