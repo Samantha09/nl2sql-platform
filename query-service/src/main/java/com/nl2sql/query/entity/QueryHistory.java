@@ -1,19 +1,15 @@
 package com.nl2sql.query.entity;
 
+import com.nl2sql.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Data;
-import org.hibernate.annotations.CreationTimestamp;
-
-import java.time.LocalDateTime;
+import lombok.EqualsAndHashCode;
 
 @Data
+@EqualsAndHashCode(callSuper = true)
 @Entity
 @Table(name = "query_history")
-public class QueryHistory {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class QueryHistory extends BaseEntity {
 
     @Column(name = "conversation_id", nullable = false, length = 64)
     private String conversationId;
@@ -47,8 +43,4 @@ public class QueryHistory {
 
     @Column(name = "chart_type", length = 20)
     private String chartType = "table";
-
-    @CreationTimestamp
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
 }

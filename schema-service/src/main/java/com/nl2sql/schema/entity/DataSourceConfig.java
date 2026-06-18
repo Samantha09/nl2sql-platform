@@ -1,20 +1,15 @@
 package com.nl2sql.schema.entity;
 
+import com.nl2sql.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Data;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-
-import java.time.LocalDateTime;
+import lombok.EqualsAndHashCode;
 
 @Data
+@EqualsAndHashCode(callSuper = true)
 @Entity
 @Table(name = "data_sources")
-public class DataSourceConfig {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class DataSourceConfig extends BaseEntity {
 
     @Column(nullable = false, length = 100)
     private String name;
@@ -36,12 +31,4 @@ public class DataSourceConfig {
 
     @Column(nullable = false, name = "password_encrypted")
     private String passwordEncrypted;
-
-    @CreationTimestamp
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
 }

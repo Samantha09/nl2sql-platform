@@ -46,4 +46,13 @@ management:
   endpoints:
     web:
       exposure:
-        include: health
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs

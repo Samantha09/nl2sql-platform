@@ -2,3 +2,5 @@ com.nl2sql.common.cache.CacheConfig
 com.nl2sql.common.mq.RabbitJsonConfig
 com.nl2sql.common.i18n.I18nAutoConfiguration
 com.nl2sql.common.i18n.I18nWebConfiguration
+com.nl2sql.common.web.WebAutoConfiguration
+com.nl2sql.common.web.OpenApiAutoConfiguration

@@ -69,5 +69,34 @@
             <artifactId>spring-webmvc</artifactId>
             <optional>true</optional>
         </dependency>
+
+        <!-- 参数校验（@Valid / @NotNull 等），optional，仅 web 服务激活 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Servlet API（HttpServletRequest），optional，仅 web 服务激活 -->
+        <dependency>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- JPA API（BaseEntity @MappedSuperclass），optional，仅持久层服务激活 -->
+        <dependency>
+            <groupId>jakarta.persistence</groupId>
+            <artifactId>jakarta.persistence-api</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- OpenAPI/Swagger 文档（OpenAPI Bean），optional，仅 web 服务激活 -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>${springdoc.version}</version>
+            <optional>true</optional>
+        </dependency>
     </dependencies>
 </project>

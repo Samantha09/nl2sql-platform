@@ -3,6 +3,7 @@ package com.nl2sql.ai.controller;
 import com.nl2sql.ai.dto.ConvertRequest;
 import com.nl2sql.ai.service.MockLLMService;
 import com.nl2sql.common.R;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,7 +15,7 @@ public class AiController {
     private final MockLLMService mockLLMService;
 
     @PostMapping("/convert")
-    public R<String> convert(@RequestBody ConvertRequest request) {
+    public R<String> convert(@Valid @RequestBody ConvertRequest request) {
         String sql = mockLLMService.convert(request.getNaturalLanguage(), request.getDataSourceId());
         return R.ok(sql);
     }

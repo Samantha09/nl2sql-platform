@@ -12,6 +12,14 @@ spring:
       discovery:
         locator:
           enabled: false
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOriginPatterns: "*"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+            allowCredentials: true
+            maxAge: 3600
       routes:
         - id: schema-service
           uri: lb://schema-service
@@ -30,4 +38,9 @@ management:
   endpoints:
     web:
       exposure:
-        include: health
+        include: health,info,metrics,gateway
+  endpoint:
+    health:
+      show-details: when_authorized
+    gateway:
+      enabled: true

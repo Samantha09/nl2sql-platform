@@ -1,10 +1,12 @@
 package com.nl2sql.query.controller;
 
 import com.nl2sql.common.R;
+import com.nl2sql.common.PageResult;
 import com.nl2sql.query.dto.QueryRequest;
 import com.nl2sql.query.dto.QueryResult;
 import com.nl2sql.query.entity.QueryHistory;
 import com.nl2sql.query.service.QueryService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,7 +20,7 @@ public class QueryController {
     private final QueryService queryService;
 
     @PostMapping("/nl")
-    public R<QueryResult> nlQuery(@RequestBody QueryRequest request) {
+    public R<QueryResult> nlQuery(@Valid @RequestBody QueryRequest request) {
         return R.ok(queryService.queryByNaturalLanguage(request));
     }
 
@@ -30,6 +32,14 @@ public class QueryController {
     @GetMapping("/history")
     public R<List<QueryHistory>> history(@RequestParam String conversationId) {
         return R.ok(queryService.history(conversationId));
+    }
+
+    @GetMapping("/history/page")
+    public R<PageResult<QueryHistory>> historyPage(
+            @RequestParam String conversationId,
+            @RequestParam(defaultValue = "1") int pageNum,
+            @RequestParam(defaultValue = "10") int pageSize) {
+        return R.ok(queryService.historyPage(conversationId, pageNum, pageSize));
     }
 
     @GetMapping("/statistics")

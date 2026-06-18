@@ -1,6 +1,7 @@
 package com.nl2sql.query.service;
 
 import com.nl2sql.common.cache.CacheNames;
+import com.nl2sql.common.PageResult;
 import com.nl2sql.common.event.NL2SQLEvent;
 import com.nl2sql.common.mq.MqConst;
 import com.nl2sql.query.dto.QueryRequest;
@@ -11,6 +12,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -62,6 +66,14 @@ public class QueryService {
     @Cacheable(cacheNames = CacheNames.QUERY_HISTORY, key = "#conversationId", unless = "#conversationId == null")
     public List<QueryHistory> history(String conversationId) {
         return historyRepository.findByConversationIdOrderByCreatedAtDesc(conversationId);
+    }
+
+    /** 按会话分页查历史（不缓存：分页参数组合多，缓存命中率低） */
+    public PageResult<QueryHistory> historyPage(String conversationId, int pageNum, int pageSize) {
+        Pageable pageable = PageRequest.of(Math.max(pageNum - 1, 0), pageSize);
+        Page<QueryHistory> page = historyRepository
+                .findByConversationIdOrderByCreatedAtDesc(conversationId, pageable);
+        return PageResult.of(page.getContent(), page.getTotalElements(), pageNum, pageSize);
     }
 
     /** 写入历史后清除该会话缓存，保证下次读取最新 */
