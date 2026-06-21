@@ -1,0 +1,14 @@
+nl2sql:
+  cache:
+    key-prefix: "test:"
+    default-ttl: 5m
+    null-ttl: 30s
+    cache-null-values: false
+    ttls:
+      "schema:table": 30m
+      "ds:list": 5m
+  mq:
+    max-retries: 5
+    initial-interval: 500
+    multiplier: 1.5
+    max-interval: 5000
