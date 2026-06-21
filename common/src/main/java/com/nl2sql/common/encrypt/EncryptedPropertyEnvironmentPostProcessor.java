@@ -5,6 +5,7 @@ import org.springframework.boot.env.EnvironmentPostProcessor;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.core.env.EnumerablePropertySource;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.env.PropertySource;
 
@@ -28,9 +29,9 @@ public class EncryptedPropertyEnvironmentPostProcessor implements EnvironmentPos
         Map<String, Object> decrypted = new HashMap<>();
 
         for (PropertySource<?> source : environment.getPropertySources()) {
-            if (source instanceof MapPropertySource mapSource) {
-                for (String name : mapSource.getPropertyNames()) {
-                    Object value = mapSource.getProperty(name);
+            if (source instanceof EnumerablePropertySource<?> enumerableSource) {
+                for (String name : enumerableSource.getPropertyNames()) {
+                    Object value = enumerableSource.getProperty(name);
                     if (value instanceof String str && SecureConfigEncryptor.isEncrypted(str)) {
                         hasEncryptedValue = true;
                         Matcher matcher = ENC_PATTERN.matcher(str);
