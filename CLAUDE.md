@@ -39,6 +39,8 @@ cd frontend && npm install && npm run dev
 - REST 统一返回 `R<T>`：`{code, message, data}`
 - 仅在用户要求时提交；提交前清理构建产物，勿提交 `node_modules`/`target`/`*.tsbuildinfo`
 - common 的基础设施依赖均为 `optional`，下游服务需显式声明 `data-redis`/`amqp` 才激活
+- **严禁硬编码**：固定取值集合用枚举（实现 `IEnum<C>`），跨类复用的字面量用常量集中定义（参考 `CacheNames`/`CacheTtl`/`MqConst`）；不裸写魔法字符串/数字
+- **错误与文案不硬编码**：业务异常 `throw new BaseException(ResultCode.XXX)`，错误码走 `IResultCode`/`ResultCode`，面向用户的文案进 i18n（`MessageUtils.get(key)` + `messages[_zh_CN/_en].properties`），不在代码里拼中文串
 
 ## 索引
 
