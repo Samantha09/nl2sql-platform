@@ -70,14 +70,22 @@
 </dependency>
 ```
 
-### 4.2 本地 bootstrap.yml
+### 4.2 业务服务 application.yml
 
-每个业务服务新增 `src/main/resources/bootstrap.yml`，只保留 Nacos 连接信息与服务名：
+每个业务服务通过 `src/main/resources/application.yml` 使用 `spring.config.import` 直接导入 Nacos 配置。为避免 `test` / `local` profile 在本地开发或单元测试时强制连接 Nacos，采用多文档 YAML + `spring.config.activate.on-profile` 控制：
 
 ```yaml
 spring:
   application:
     name: nl2sql-schema-service   # 每个服务不同
+---
+spring:
+  config:
+    activate:
+      on-profile: '!local & !test'
+    import:
+      - nacos:nl2sql-common.yml?group=DEFAULT_GROUP
+      - nacos:nl2sql-schema-service.yml?group=DEFAULT_GROUP
   cloud:
     nacos:
       config:
@@ -85,11 +93,10 @@ spring:
         namespace: ${NACOS_NAMESPACE:}
         group: ${NACOS_GROUP:DEFAULT_GROUP}
         file-extension: yml
-        shared-configs:
-          - data-id: nl2sql-common.yml
-            group: ${NACOS_GROUP:DEFAULT_GROUP}
-            refresh: true
 ```
+
+- 默认（无 profile）运行时，Spring Boot 通过 `nacos:...` import 从 Nacos 拉取配置。
+- `local` / `test` profile 下，Nacos import 不激活，分别由 `application-local.yml` / `application-test.yml` 接管。
 
 ### 4.3 Nacos 上创建的配置
 
@@ -171,18 +178,19 @@ nl2sql:
 
 query/ai 服务类似，按原 `application.yml` 拆分。
 
-### 4.5 本地开发 fallback
+### 4.5 本地开发与测试 fallback
 
-每个服务保留 `src/main/resources/application-local.yml`，内容与 Nacos 未加密版一致，方便本地无 Nacos 时开发：
+| Profile | 文件 | 说明 |
+|---------|------|------|
+| `local` | `src/main/resources/application-local.yml` | 本地无 Nacos 时启动使用，包含完整本地配置（明文密码），并保留 `optional:nacos:...` 作为可选补充。 |
+| `test` | `src/test/resources/application-test.yml` | 单元测试使用，禁用 Nacos discovery/config，并将 `spring.config.import` 指向空文件，避免加载 Nacos 密文。 |
+| `test` | `src/test/resources/application-empty.yml` | 空文件占位，用于满足 `spring.config.import` 的语法要求。 |
 
-```yaml
-spring:
-  config:
-    activate:
-      on-profile: local
+启动本地 fallback：
+
+```bash
+java -jar schema-service/target/schema-service-0.0.1-SNAPSHOT.jar --spring.profiles.active=local
 ```
-
-启动时加 `--spring.profiles.active=local` 或设置 `SPRING_PROFILES_ACTIVE=local`。
 
 ---
 
@@ -274,21 +282,24 @@ java -cp common/target/classes com.nl2sql.common.encrypt.EncryptTool "nl2sql123"
 | `common/src/main/java/com/nl2sql/common/encrypt/SecureConfigEncryptor.java` | AES-256-GCM 加解密 |
 | `common/src/main/java/com/nl2sql/common/encrypt/EncryptedPropertyEnvironmentPostProcessor.java` | 自动解密 ENC(...) |
 | `common/src/main/java/com/nl2sql/common/encrypt/EncryptTool.java` | 命令行加密工具 |
-| `common/src/main/resources/META-INF/spring/org.springframework.boot.env.EnvironmentPostProcessor.imports` | 注册 PostProcessor |
-| `schema-service/src/main/resources/bootstrap.yml` | Nacos Config 引导 |
+| `common/src/main/resources/META-INF/spring.factories` | 注册 PostProcessor（通过 `org.springframework.boot.env.EnvironmentPostProcessor`） |
 | `schema-service/src/main/resources/application-local.yml` | 本地开发 fallback |
-| `query-service/src/main/resources/bootstrap.yml` | Nacos Config 引导 |
+| `schema-service/src/test/resources/application-empty.yml` | 测试占位空文件，满足 `spring.config.import` 语法 |
 | `query-service/src/main/resources/application-local.yml` | 本地开发 fallback |
-| `ai-service/src/main/resources/bootstrap.yml` | Nacos Config 引导 |
+| `query-service/src/test/resources/application-empty.yml` | 测试占位空文件 |
 | `ai-service/src/main/resources/application-local.yml` | 本地开发 fallback |
+| `ai-service/src/test/resources/application-empty.yml` | 测试占位空文件 |
 
 ### 6.3 修改文件
 
 | 文件 | 说明 |
 |------|------|
-| `schema-service/src/main/resources/application.yml` | 清空或仅保留 spring.profiles.active |
+| `schema-service/src/main/resources/application.yml` | 仅保留服务名；默认 profile 使用多文档 YAML 条件导入 Nacos 配置 |
 | `query-service/src/main/resources/application.yml` | 同上 |
 | `ai-service/src/main/resources/application.yml` | 同上 |
+| `schema-service/src/test/resources/application-test.yml` | 禁用 Nacos，将 `spring.config.import` 指向空文件 |
+| `query-service/src/test/resources/application-test.yml` | 同上 |
+| `ai-service/src/test/resources/application-test.yml` | 同上 |
 
 ### 6.4 新增测试
 
@@ -304,8 +315,8 @@ java -cp common/target/classes com.nl2sql.common.encrypt.EncryptTool "nl2sql123"
 1. 创建新分支 `feat/nacos-config-encryption`。
 2. 实现 `SecureConfigEncryptor` 与 `EncryptedPropertyEnvironmentPostProcessor`。
 3. 修改 pom 依赖。
-4. 新增 `bootstrap.yml` 与 `application-local.yml`。
-5. 清空原 `application.yml`。
+4. 配置 `application.yml` 使用 `spring.config.import` 按条件导入 Nacos 配置；新增 `application-local.yml` 作为本地 fallback。
+5. 配置 `application-test.yml` 与空 `application-empty.yml`，确保测试不依赖 Nacos。
 6. 生成本地测试用的 AES 密钥与密文。
 7. 在本地 Nacos 创建 4 个配置文件并填入密文。
 8. 启动 schema/query/ai 服务验证连通性。

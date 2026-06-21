@@ -4,7 +4,7 @@
 
 **Goal:** 引入 Nacos Config 统一管理 schema/query/ai 服务配置，并用 AES-256-GCM 加密敏感字段；本地保留 `application-local.yml` fallback。
 
-**Architecture:** 在 common 实现 `SecureConfigEncryptor` + `EncryptedPropertyEnvironmentPostProcessor` 自动解密 `ENC(...)`；各服务通过 `bootstrap.yml` 连接 Nacos 拉取配置；敏感字段密文存 Nacos，密钥通过 `NL2SQL_ENCRYPT_KEY` 环境变量注入。
+**Architecture:** 在 common 实现 `SecureConfigEncryptor` + `EncryptedPropertyEnvironmentPostProcessor` 自动解密 `ENC(...)`；各服务通过 `application.yml` 中的 `spring.config.import` 按条件连接 Nacos 拉取配置；敏感字段密文存 Nacos，密钥通过 `NL2SQL_ENCRYPT_KEY` 环境变量注入。
 
 **Tech Stack:** Java 17, Spring Boot 3.2.5, Spring Cloud Alibaba 2023, Nacos 2.4, AES-256-GCM.
 
@@ -194,7 +194,7 @@ git commit -m "feat(common): AES-256-GCM 配置加密工具类"
 
 **Files:**
 - Create: `common/src/main/java/com/nl2sql/common/encrypt/EncryptedPropertyEnvironmentPostProcessor.java`
-- Create: `common/src/main/resources/META-INF/spring/org.springframework.boot.env.EnvironmentPostProcessor.imports`
+- Create: `common/src/main/resources/META-INF/spring.factories`
 
 **Interfaces:**
 - Consumes: `SecureConfigEncryptor`
@@ -209,7 +209,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.env.EnvironmentPostProcessor;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
-import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.core.env.EnumerablePropertySource;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.env.PropertySource;
 
@@ -233,14 +233,14 @@ public class EncryptedPropertyEnvironmentPostProcessor implements EnvironmentPos
         Map<String, Object> decrypted = new HashMap<>();
 
         for (PropertySource<?> source : environment.getPropertySources()) {
-            if (source instanceof MapPropertySource mapSource) {
-                for (String name : mapSource.getPropertyNames()) {
-                    Object value = mapSource.getProperty(name);
+            if (source instanceof EnumerablePropertySource<?> enumerableSource) {
+                for (String name : enumerableSource.getPropertyNames()) {
+                    Object value = enumerableSource.getProperty(name);
                     if (value instanceof String str && SecureConfigEncryptor.isEncrypted(str)) {
                         hasEncryptedValue = true;
                         Matcher matcher = ENC_PATTERN.matcher(str);
                         if (matcher.matches()) {
-                            String key = SecureConfigEncryptor.getKeyFromEnv();
+                            String key = resolveKey();
                             decrypted.put(name, SecureConfigEncryptor.decrypt(str, key));
                         }
                     }
@@ -257,15 +257,27 @@ public class EncryptedPropertyEnvironmentPostProcessor implements EnvironmentPos
             environment.getPropertySources().addFirst(decryptedSource);
         }
     }
+
+    private String resolveKey() {
+        String key = System.getenv(SecureConfigEncryptor.ENV_KEY_NAME);
+        if (key == null || key.isBlank()) {
+            key = System.getProperty(SecureConfigEncryptor.ENV_KEY_NAME);
+        }
+        if (key == null || key.isBlank()) {
+            throw new IllegalStateException("环境变量 " + SecureConfigEncryptor.ENV_KEY_NAME + " 未设置，无法解密 ENC(...) 配置");
+        }
+        return key;
+    }
 }
 ```
 
 - [ ] **Step 2: 注册 PostProcessor**
 
-Create `common/src/main/resources/META-INF/spring/org.springframework.boot.env.EnvironmentPostProcessor.imports`:
+Create `common/src/main/resources/META-INF/spring.factories`:
 
-```
-com.nl2sql.common.encrypt.EncryptedPropertyEnvironmentPostProcessor
+```properties
+org.springframework.boot.env.EnvironmentPostProcessor=\
+  com.nl2sql.common.encrypt.EncryptedPropertyEnvironmentPostProcessor
 ```
 
 - [ ] **Step 3: 编译 common**
@@ -277,7 +289,7 @@ Expected: BUILD SUCCESS
 
 ```bash
 git add common/src/main/java/com/nl2sql/common/encrypt/EncryptedPropertyEnvironmentPostProcessor.java \
-    common/src/main/resources/META-INF/spring/org.springframework.boot.env.EnvironmentPostProcessor.imports
+    common/src/main/resources/META-INF/spring.factories
 git commit -m "feat(common): 启动时自动解密 ENC(...) 配置"
 ```
 
@@ -648,25 +660,33 @@ git commit -m "chore(config): 业务服务引入 Nacos Config 依赖"
 
 ---
 
-## Task 7: 新增 bootstrap.yml 与 application-local.yml
+## Task 7: 业务服务 application.yml 条件导入 Nacos 配置
 
 **Files:**
-- Create: `schema-service/src/main/resources/bootstrap.yml`
+- Modify: `schema-service/src/main/resources/application.yml`
 - Create: `schema-service/src/main/resources/application-local.yml`
-- Create: `query-service/src/main/resources/bootstrap.yml`
+- Modify: `query-service/src/main/resources/application.yml`
 - Create: `query-service/src/main/resources/application-local.yml`
-- Create: `ai-service/src/main/resources/bootstrap.yml`
+- Modify: `ai-service/src/main/resources/application.yml`
 - Create: `ai-service/src/main/resources/application-local.yml`
 
 **Interfaces:**
-- Produces: 每个服务具备 Nacos 引导和本地 fallback 配置
+- Produces: 默认 profile 从 Nacos 拉取配置；`local` profile 使用本地 fallback
 
-- [ ] **Step 1: 创建 schema-service/bootstrap.yml**
+- [ ] **Step 1: 重写 schema-service/application.yml**
 
 ```yaml
 spring:
   application:
     name: nl2sql-schema-service
+---
+spring:
+  config:
+    activate:
+      on-profile: '!local & !test'
+    import:
+      - nacos:nl2sql-common.yml?group=DEFAULT_GROUP
+      - nacos:nl2sql-schema-service.yml?group=DEFAULT_GROUP
   cloud:
     nacos:
       config:
@@ -674,10 +694,6 @@ spring:
         namespace: ${NACOS_NAMESPACE:}
         group: ${NACOS_GROUP:DEFAULT_GROUP}
         file-extension: yml
-        shared-configs:
-          - data-id: nl2sql-common.yml
-            group: ${NACOS_GROUP:DEFAULT_GROUP}
-            refresh: true
 ```
 
 - [ ] **Step 2: 创建 schema-service/application-local.yml**
@@ -687,11 +703,9 @@ spring:
   config:
     activate:
       on-profile: local
-
-server:
-  port: 8081
-
-spring:
+    import:
+      - optional:nacos:nl2sql-common.yml?group=DEFAULT_GROUP
+      - optional:nacos:nl2sql-schema-service.yml?group=DEFAULT_GROUP
   datasource:
     url: jdbc:mysql://${MYSQL_HOST:localhost}:3306/nl2sql_schema?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
     username: root
@@ -707,64 +721,8 @@ spring:
       port: 6379
   cloud:
     nacos:
-      discovery:
-        server-addr: ${NACOS_SERVER:localhost:8848}
-
-nl2sql:
-  cache:
-    key-prefix: "nl2sql:"
-    default-ttl: 10m
-    null-ttl: 60s
-    cache-null-values: true
-    ttls:
-      ds:list: 5m
-      schema:table: 30m
-      schema:tables: 10m
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics
-  endpoint:
-    health:
-      show-details: always
-
-springdoc:
-  swagger-ui:
-    path: /swagger-ui.html
-  api-docs:
-    path: /v3/api-docs
-
-logging:
-  level:
-    root: info
-```
-
-注意：YAML 中同一个 `spring` 出现两次，合并即可。建议把 `spring.config.activate` 放在最上面，然后统一一个 `spring:` 块。
-
-修正后的 schema-service/application-local.yml：
-
-```yaml
-spring:
-  config:
-    activate:
-      on-profile: local
-  datasource:
-    url: jdbc:mysql://${MYSQL_HOST:localhost}:3306/nl2sql_schema?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
-    username: root
-    password: nl2sql123
-    driver-class-name: com.mysql.cj.jdbc.Driver
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: true
-  data:
-    redis:
-      host: ${REDIS_HOST:localhost}
-      port: 6379
-  cloud:
-    nacos:
+      config:
+        enabled: false
       discovery:
         server-addr: ${NACOS_SERVER:localhost:8848}
 
@@ -802,12 +760,20 @@ logging:
     root: info
 ```
 
-- [ ] **Step 3: 创建 query-service/bootstrap.yml**
+- [ ] **Step 3: 重写 query-service/application.yml**
 
 ```yaml
 spring:
   application:
     name: nl2sql-query-service
+---
+spring:
+  config:
+    activate:
+      on-profile: '!local & !test'
+    import:
+      - nacos:nl2sql-common.yml?group=DEFAULT_GROUP
+      - nacos:nl2sql-query-service.yml?group=DEFAULT_GROUP
   cloud:
     nacos:
       config:
@@ -815,10 +781,6 @@ spring:
         namespace: ${NACOS_NAMESPACE:}
         group: ${NACOS_GROUP:DEFAULT_GROUP}
         file-extension: yml
-        shared-configs:
-          - data-id: nl2sql-common.yml
-            group: ${NACOS_GROUP:DEFAULT_GROUP}
-            refresh: true
 ```
 
 - [ ] **Step 4: 创建 query-service/application-local.yml**
@@ -828,6 +790,9 @@ spring:
   config:
     activate:
       on-profile: local
+    import:
+      - optional:nacos:nl2sql-common.yml?group=DEFAULT_GROUP
+      - optional:nacos:nl2sql-query-service.yml?group=DEFAULT_GROUP
   datasource:
     url: jdbc:mysql://${MYSQL_HOST:localhost}:3306/nl2sql_query?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
     username: root
@@ -848,6 +813,8 @@ spring:
       port: 6379
   cloud:
     nacos:
+      config:
+        enabled: false
       discovery:
         server-addr: ${NACOS_SERVER:localhost:8848}
 
@@ -888,12 +855,20 @@ logging:
     root: info
 ```
 
-- [ ] **Step 5: 创建 ai-service/bootstrap.yml**
+- [ ] **Step 5: 重写 ai-service/application.yml**
 
 ```yaml
 spring:
   application:
     name: nl2sql-ai-service
+---
+spring:
+  config:
+    activate:
+      on-profile: '!local & !test'
+    import:
+      - nacos:nl2sql-common.yml?group=DEFAULT_GROUP
+      - nacos:nl2sql-ai-service.yml?group=DEFAULT_GROUP
   cloud:
     nacos:
       config:
@@ -901,10 +876,6 @@ spring:
         namespace: ${NACOS_NAMESPACE:}
         group: ${NACOS_GROUP:DEFAULT_GROUP}
         file-extension: yml
-        shared-configs:
-          - data-id: nl2sql-common.yml
-            group: ${NACOS_GROUP:DEFAULT_GROUP}
-            refresh: true
 ```
 
 - [ ] **Step 6: 创建 ai-service/application-local.yml**
@@ -914,6 +885,9 @@ spring:
   config:
     activate:
       on-profile: local
+    import:
+      - optional:nacos:nl2sql-common.yml?group=DEFAULT_GROUP
+      - optional:nacos:nl2sql-ai-service.yml?group=DEFAULT_GROUP
   datasource:
     url: jdbc:mysql://${MYSQL_HOST:localhost}:3306/nl2sql_ai?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
     username: root
@@ -930,6 +904,8 @@ spring:
     password: admin
   cloud:
     nacos:
+      config:
+        enabled: false
       discovery:
         server-addr: ${NACOS_SERVER:localhost:8848}
 
@@ -971,52 +947,73 @@ Expected: BUILD SUCCESS
 - [ ] **Step 8: Commit**
 
 ```bash
-git add schema-service/src/main/resources bootstrap.yml application-local.yml \
-    query-service/src/main/resources/bootstrap.yml application-local.yml \
-    ai-service/src/main/resources/bootstrap.yml application-local.yml
-git commit -m "feat(config): 业务服务增加 bootstrap.yml 与本地 fallback"
+git add schema-service/src/main/resources/application.yml \
+    schema-service/src/main/resources/application-local.yml \
+    query-service/src/main/resources/application.yml \
+    query-service/src/main/resources/application-local.yml \
+    ai-service/src/main/resources/application.yml \
+    ai-service/src/main/resources/application-local.yml
+git commit -m "feat(config): 业务服务 application.yml 条件导入 Nacos 配置并保留 local fallback"
 ```
 
 ---
 
-## Task 8: 清空原 application.yml
+## Task 8: 测试配置与空占位文件
 
 **Files:**
-- Modify: `schema-service/src/main/resources/application.yml`
-- Modify: `query-service/src/main/resources/application.yml`
-- Modify: `ai-service/src/main/resources/application.yml`
+- Modify: `schema-service/src/test/resources/application-test.yml`
+- Create: `schema-service/src/test/resources/application-empty.yml`
+- Modify: `query-service/src/test/resources/application-test.yml`
+- Create: `query-service/src/test/resources/application-empty.yml`
+- Modify: `ai-service/src/test/resources/application-test.yml`
+- Create: `ai-service/src/test/resources/application-empty.yml`
 
 **Interfaces:**
-- Produces: 原 application.yml 不再包含重复配置，避免与 Nacos 配置冲突
+- Produces: 单元测试不连接 Nacos、不触发 ENC 解密
 
-- [ ] **Step 1: 重写 schema-service/application.yml**
+- [ ] **Step 1: 修改 schema-service/application-test.yml**
 
 ```yaml
 spring:
-  profiles:
-    active: ${SPRING_PROFILES_ACTIVE:}
+  application:
+    name: schema-service-test
+  config:
+    import: optional:classpath:application-empty.yml
+  cloud:
+    nacos:
+      discovery:
+        enabled: false
+      config:
+        enabled: false
+  main:
+    allow-bean-definition-overriding: true
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+
+logging:
+  level:
+    root: warn
 ```
 
-- [ ] **Step 2: 重写 query-service/application.yml**
+- [ ] **Step 2: 创建 schema-service/application-empty.yml**
 
-同上。
+空文件即可。
 
-- [ ] **Step 3: 重写 ai-service/application.yml**
+- [ ] **Step 3-6: 同理修改 query-service 与 ai-service 的 application-test.yml，并创建对应 application-empty.yml**
 
-同上。
+- [ ] **Step 7: 运行全项目测试**
 
-- [ ] **Step 4: 编译验证**
-
-Run: `export JAVA_HOME=/home/san/.jdks/ms-17.0.19 && mvn -q clean compile`
+Run: `export JAVA_HOME=/home/san/.jdks/ms-17.0.19 && mvn -q test`
 Expected: BUILD SUCCESS
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
-git add schema-service/src/main/resources/application.yml \
-    query-service/src/main/resources/application.yml \
-    ai-service/src/main/resources/application.yml
-git commit -m "feat(config): 清空业务服务 application.yml，改由 Nacos 加载"
+git add schema-service/src/test/resources \
+    query-service/src/test/resources \
+    ai-service/src/test/resources
+git commit -m "test(config): 测试禁用 Nacos 并使用空 import 占位"
 ```
 
 ---
