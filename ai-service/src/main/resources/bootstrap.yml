@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: nl2sql-ai-service
+  cloud:
+    nacos:
+      config:
+        server-addr: ${NACOS_SERVER:localhost:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        group: ${NACOS_GROUP:DEFAULT_GROUP}
+        file-extension: yml
+        shared-configs:
+          - data-id: nl2sql-common.yml
+            group: ${NACOS_GROUP:DEFAULT_GROUP}
+            refresh: true
