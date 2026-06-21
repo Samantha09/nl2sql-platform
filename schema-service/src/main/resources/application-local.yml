@@ -2,6 +2,9 @@ spring:
   config:
     activate:
       on-profile: local
+    import:
+      - optional:nacos:nl2sql-common.yml?group=DEFAULT_GROUP
+      - optional:nacos:nl2sql-schema-service.yml?group=DEFAULT_GROUP
   datasource:
     url: jdbc:mysql://${MYSQL_HOST:localhost}:3306/nl2sql_schema?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
     username: root
@@ -17,6 +20,8 @@ spring:
       port: 6379
   cloud:
     nacos:
+      config:
+        enabled: false
       discovery:
         server-addr: ${NACOS_SERVER:localhost:8848}
 
