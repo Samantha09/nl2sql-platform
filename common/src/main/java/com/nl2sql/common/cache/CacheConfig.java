@@ -1,6 +1,10 @@
 package com.nl2sql.common.cache;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -38,7 +42,17 @@ public class CacheConfig {
 
     /** JSON 序列化器：value 以 JSON 存储，保留类型信息以便正确反序列化 */
     private GenericJackson2JsonRedisSerializer jsonSerializer() {
-        return new GenericJackson2JsonRedisSerializer(new ObjectMapper());
+        ObjectMapper mapper = new ObjectMapper()
+                // 支持 LocalDateTime 等 Java 8 时间类型（如审计字段 createdAt/updatedAt），用 ISO 字符串而非时间戳数组
+                .registerModule(new JavaTimeModule())
+                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        // 开启默认类型信息（写入 @class），使复杂对象能反序列化回原类型，
+        // 否则缓存命中时会得到 LinkedHashMap 并在调用方强转目标类型时抛 ClassCastException。
+        mapper.activateDefaultTyping(
+                LaissezFaireSubTypeValidator.instance,
+                ObjectMapper.DefaultTyping.NON_FINAL,
+                JsonTypeInfo.As.PROPERTY);
+        return new GenericJackson2JsonRedisSerializer(mapper);
     }
 
     /** 通用 RedisTemplate：String key + JSON value，供需要手动操作缓存的场景使用 */
