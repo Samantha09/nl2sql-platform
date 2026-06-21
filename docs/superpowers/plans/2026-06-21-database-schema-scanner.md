@@ -1768,3 +1768,55 @@ Expected: 无 `target/`、`*.class` 等被跟踪
 - `DbType.MYSQL`、`SchemaResultCode.*` 跨任务引用一致 ✓
 
 **风险备注：** Task 6 集成测试依赖本机 Docker。若执行环境无 Docker，该测试会失败/报错——执行时若无 Docker，可临时 `-Dtest=!MySqlDatabaseScannerIT` 跳过它跑其余单测，但 Task 6 实现仍须完成。
+
+---
+
+## 续：前端数据源管理 UI（2026-06-21 收尾，明天继续）
+
+后端扫描全链路 + 前端表结构页接入真实接口已完成并提交。剩余仅前端「数据源管理 UI」一块。
+
+### 已提交进度
+
+- `abd6de5` fix(common)：修复 Redis 缓存序列化（@class 类型信息 + JavaTimeModule），根治缓存命中强转 ClassCastException
+- `cfe02bc` feat(frontend)：ObjectTree/SchemaView/Topbar 接入真实扫描数据，失败回退 mock；新增注释列、索引区、真实外键
+- 地基已铺好（含在上述提交内，`tsc -b` 通过）：
+  - `frontend/src/api/types.ts` — `DataSourceInput` 表单类型、`DataSourceConfig.username?`
+  - `frontend/src/api/schema.ts` — `addDataSource(DataSourceInput)`、`deleteDataSource(id)`
+
+### 用户决策
+
+数据源管理范围 = **完整管理**（切换 + 新增 + 删除，新增后自动选中并扫描）。
+
+### 待开发任务
+
+**Task A：store 升级为多数据源**
+- 文件：`frontend/src/lib/store.tsx`
+- 新增 state：`dataSources: DataSourceConfig[]`
+- `loadSchema`（当前第 81-100 行）改为保存整个列表，而非只取 `dss[0]`
+- 新增 actions：
+  - `selectDataSource(id)`：切换当前源 → 读 `listTables` + `loadDetails` → 更新 dsId/dsName/dbName/tableNames/details
+  - `createDataSource(form: DataSourceInput)`：`addDataSource(form)` → 刷新列表 → 选中新源 → `scanTables` 自动扫描
+  - `removeDataSource(id)`：`deleteDataSource(id)` → 刷新列表 → 选回第一个（列表空则回退 mock 或空态）
+- 把 `dataSources` 与三个 action 加入 `StoreCtx` 类型与 Provider value
+
+**Task B：新增数据源表单组件**
+- 文件（新建）：`frontend/src/components/DataSourceModal.tsx`
+- 字段：name / type（默认 mysql）/ host / port（默认 3306）/ databaseName / username / passwordEncrypted
+- 提交调 `createDataSource`，成功后关闭 Modal；加载态与错误 toast
+
+**Task C：ObjectTree 头部接管理入口**
+- 文件：`frontend/src/components/ObjectTree.tsx`
+- `objtree-head` 的 `＋`（当前第 11 行占位）接上：
+  - 数据源 `<select>` 下拉（绑 `dataSources` + `selectDataSource`）
+  - `＋` 打开 DataSourceModal
+  - 当前源旁加删除按钮（调 `removeDataSource`，带二次确认）
+
+**Task D：收尾验证**
+- `cd frontend && npx tsc -b` 类型检查通过
+- `setsid npm run dev > /tmp/vite.log 2>&1 < /dev/null &` 重启前端（独立 Bash 调用，勿与 pkill 同命令）
+- 浏览器验证：新增一个数据源 → 自动选中并扫描出表 → 切换 → 删除
+
+### 环境备忘
+
+- schema-service:8081 / gateway:8080 / vite:5173；数据源 id=1=nl2sql_schema 已存在；Redis 已 flush
+- 后端启动需 `NL2SQL_ENCRYPT_KEY`，详见 docs/dev/operations.md
