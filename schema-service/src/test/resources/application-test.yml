@@ -14,7 +14,13 @@ spring:
   autoconfigure:
     exclude:
       - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+  # 测试用 H2，表结构由 Hibernate ddl-auto 依实体生成；
+  # 不执行 MySQL 语法的 schema.sql（CREATE DATABASE 等在 H2 上不兼容）
+  sql:
+    init:
+      mode: never
 
 logging:
   level:
     root: warn
+

@@ -3,6 +3,7 @@ package com.nl2sql.schema.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nl2sql.schema.entity.DataSourceConfig;
 import com.nl2sql.schema.service.DataSourceService;
+import com.nl2sql.schema.service.SchemaScanService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +16,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -33,6 +35,9 @@ class DataSourceControllerTest {
 
     @MockBean
     private DataSourceService dataSourceService;
+
+    @MockBean
+    private SchemaScanService scanService;
 
     @Test
     @DisplayName("POST /api/schema/datasource 应返回创建后的数据源")
@@ -76,5 +81,19 @@ class DataSourceControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.message").value("success"));
+    }
+
+    @Test
+    @DisplayName("POST /api/schema/scan/{id} 应触发真实扫描并返回表名")
+    void shouldTriggerRealScan() throws Exception {
+        when(scanService.scan(1L)).thenReturn(List.of("users", "orders"));
+
+        mockMvc.perform(post("/api/schema/scan/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data[0]").value("users"))
+                .andExpect(jsonPath("$.data[1]").value("orders"));
+
+        verify(scanService).scan(1L);
     }
 }
