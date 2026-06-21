@@ -1,7 +1,11 @@
 spring:
   application:
     name: nl2sql-ai-service
+---
+spring:
   config:
+    activate:
+      on-profile: '!local & !test'
     import:
       - nacos:nl2sql-common.yml?group=DEFAULT_GROUP
       - nacos:nl2sql-ai-service.yml?group=DEFAULT_GROUP

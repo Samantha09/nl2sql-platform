@@ -1,9 +1,13 @@
 spring:
   application:
     name: schema-service-test
+  config:
+    import: optional:classpath:application-empty.yml
   cloud:
     nacos:
       discovery:
+        enabled: false
+      config:
         enabled: false
   main:
     allow-bean-definition-overriding: true

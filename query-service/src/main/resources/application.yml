@@ -1,7 +1,11 @@
 spring:
   application:
     name: nl2sql-query-service
+---
+spring:
   config:
+    activate:
+      on-profile: '!local & !test'
     import:
       - nacos:nl2sql-common.yml?group=DEFAULT_GROUP
       - nacos:nl2sql-query-service.yml?group=DEFAULT_GROUP
