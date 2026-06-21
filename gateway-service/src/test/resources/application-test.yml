@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: gateway-service-test
+  cloud:
+    nacos:
+      discovery:
+        enabled: false
+    gateway:
+      discovery:
+        locator:
+          enabled: false
+  main:
+    web-application-type: reactive
+
+logging:
+  level:
+    root: warn
