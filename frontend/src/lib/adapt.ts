@@ -1,5 +1,5 @@
-import { ChartType, KBItem, Series } from '../types';
-import { QueryResult } from '../api/types';
+import { ChartType, KBItem, Series, TableMeta } from '../types';
+import { QueryResult, TableSchemaDTO } from '../api/types';
 
 /** 查询结果视图模型：mock 命中与后端返回统一归一到此形状，供 QueryView 渲染 */
 export interface ResultVM {
@@ -56,5 +56,42 @@ export function fromQueryResult(res: QueryResult): ResultVM {
     chart: asChart(res.chartType),
     data: deriveSeries(cols, rows),
     source: 'real',
+  };
+}
+
+/**
+ * 后端 TableSchemaDTO → 前端 TableMeta（供 SchemaView/ObjectTree 渲染）。
+ * pk 由 primaryKeys 判定，fk 由 foreignKeys 反查列得到 `引用表.引用列`，
+ * rels 由外键拼成 `本表.列 → 引用表.列`。结构扫描不含行数据，故 rows=0、data 为空。
+ */
+export function fromTableDetail(dto: TableSchemaDTO): TableMeta {
+  const pkSet = new Set(dto.primaryKeys);
+  // 列名 → 其外键目标（取第一处匹配）
+  const fkByColumn = new Map<string, string>();
+  for (const fk of dto.foreignKeys) {
+    fk.columns.forEach((col, i) => {
+      if (!fkByColumn.has(col)) {
+        fkByColumn.set(col, `${fk.referencedTable}.${fk.referencedColumns[i] ?? ''}`);
+      }
+    });
+  }
+  const cols = dto.columns.map(c => ({
+    name: c.name,
+    type: c.type,
+    nullable: c.nullable,
+    comment: c.comment,
+    pk: pkSet.has(c.name) || undefined,
+    fk: fkByColumn.get(c.name),
+  }));
+  const rels = dto.foreignKeys.flatMap(fk =>
+    fk.columns.map((col, i) =>
+      `${dto.tableName}.${col} → ${fk.referencedTable}.${fk.referencedColumns[i] ?? ''}`));
+  return {
+    rows: 0,
+    cols,
+    rels,
+    data: [],
+    comment: dto.tableComment,
+    indexes: dto.indexes,
   };
 }

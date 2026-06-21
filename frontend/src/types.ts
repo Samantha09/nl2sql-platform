@@ -13,6 +13,8 @@ export interface Column {
   pk?: boolean;
   fk?: string;
   nullable: boolean;
+  /** 列注释（真实扫描时可能为空字符串） */
+  comment?: string;
 }
 
 export interface TableMeta {
@@ -20,6 +22,10 @@ export interface TableMeta {
   cols: Column[];
   rels: string[];
   data: (string | number)[][];
+  /** 表注释（真实扫描数据才有） */
+  comment?: string;
+  /** 唯一/普通索引（真实扫描数据才有） */
+  indexes?: { name: string; unique: boolean; columns: string[] }[];
 }
 
 export interface KBItem {

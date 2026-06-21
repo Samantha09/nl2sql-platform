@@ -55,4 +55,52 @@ export interface DataSourceConfig {
   host: string;
   port: number;
   databaseName: string;
+  /** 用户名（列表接口会返回） */
+  username?: string;
+}
+
+/** 新增数据源的表单入参（password 明文，后端按需加密存储） */
+export interface DataSourceInput {
+  name: string;
+  type: string;
+  host: string;
+  port: number;
+  databaseName: string;
+  username: string;
+  /** 明文密码，提交到后端 passwordEncrypted 字段 */
+  passwordEncrypted: string;
+}
+
+/** 对应 schema-service TableSchemaDTO.ColumnInfo */
+export interface ColumnInfo {
+  name: string;
+  type: string;
+  comment: string;
+  nullable: boolean;
+  defaultValue: string | null;
+}
+
+/** 对应 schema-service TableSchemaDTO.IndexInfo */
+export interface IndexInfo {
+  name: string;
+  unique: boolean;
+  columns: string[];
+}
+
+/** 对应 schema-service TableSchemaDTO.ForeignKeyInfo */
+export interface ForeignKeyInfo {
+  name: string;
+  columns: string[];
+  referencedTable: string;
+  referencedColumns: string[];
+}
+
+/** 对应 schema-service TableSchemaDTO（单表结构详情） */
+export interface TableSchemaDTO {
+  tableName: string;
+  tableComment: string;
+  columns: ColumnInfo[];
+  primaryKeys: string[];
+  indexes: IndexInfo[];
+  foreignKeys: ForeignKeyInfo[];
 }
