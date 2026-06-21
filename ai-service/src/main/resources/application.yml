@@ -1,6 +1,6 @@
 spring:
   application:
-    name: nl2sql-ai-service
+    name: ai-service
 ---
 spring:
   config:
