@@ -68,10 +68,14 @@ export default function DataSourceModal({ isOpen, onClose, mode = 'create', init
     setForm(f => ({ ...f, [key]: value }));
 
   const addDatabaseName = () => {
-    const name = dbInput.trim();
-    if (!name) return;
-    if (form.databaseNames.includes(name)) return;
-    update('databaseNames', [...form.databaseNames, name]);
+    const raw = dbInput.trim();
+    if (!raw) return;
+    const names = raw.split(/[,，\s]+/).filter(Boolean);
+    const next = [...form.databaseNames];
+    names.forEach(name => {
+      if (!next.includes(name)) next.push(name);
+    });
+    update('databaseNames', next);
     setDbInput('');
   };
 
