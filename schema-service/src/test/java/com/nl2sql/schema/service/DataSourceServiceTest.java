@@ -76,17 +76,19 @@ class DataSourceServiceTest {
     }
 
     @Test
-    @DisplayName("scanTables 从 table_list_cache 反序列化表名")
+    @DisplayName("scanTables 从 table_list_cache 反序列化按库分组的表名")
     void shouldReadTablesFromCache() {
         TableListCache list = new TableListCache();
-        list.setTableJson("[\"users\",\"orders\"]");
+        list.setTableJson("{\"shop\":[\"users\",\"orders\"]}");
         when(tableListCacheRepository.findByDataSourceId(1L)).thenReturn(Optional.of(list));
 
-        assertThat(service.scanTables(1L)).containsExactly("users", "orders");
+        assertThat(service.scanTables(1L))
+                .containsEntry("shop", List.of("users", "orders"))
+                .hasSize(1);
     }
 
     @Test
-    @DisplayName("scanTables 未扫描过返回空列表")
+    @DisplayName("scanTables 未扫描过返回空 Map")
     void shouldReturnEmptyWhenNotScanned() {
         when(tableListCacheRepository.findByDataSourceId(9L)).thenReturn(Optional.empty());
 
@@ -98,16 +100,17 @@ class DataSourceServiceTest {
     void shouldAssembleDetailFromCache() {
         SchemaCache cache = new SchemaCache();
         cache.setTableName("users");
+        cache.setDatabaseName("shop");
         cache.setTableComment("用户表");
         cache.setColumnJson("[{\"name\":\"id\",\"type\":\"bigint\",\"comment\":\"主键\","
                 + "\"nullable\":false,\"defaultValue\":null,\"ordinalPosition\":1}]");
         cache.setPrimaryKeyJson("[\"id\"]");
         cache.setIndexJson("[]");
         cache.setForeignKeyJson("[]");
-        when(schemaCacheRepository.findByDataSourceIdAndTableName(1L, "users"))
+        when(schemaCacheRepository.findByDataSourceIdAndDatabaseNameAndTableName(1L, "shop", "users"))
                 .thenReturn(Optional.of(cache));
 
-        TableSchemaDTO dto = service.getTableDetail(1L, "users");
+        TableSchemaDTO dto = service.getTableDetail(1L, "shop", "users");
 
         assertThat(dto.getTableName()).isEqualTo("users");
         assertThat(dto.getTableComment()).isEqualTo("用户表");

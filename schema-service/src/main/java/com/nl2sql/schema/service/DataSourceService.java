@@ -20,8 +20,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -47,19 +46,35 @@ public class DataSourceService {
         repository.deleteById(id);
     }
 
-    /** 读已持久化的表名列表（由扫描写入 table_list_cache）。 */
+    @CacheEvict(cacheNames = CacheNames.DS_LIST, allEntries = true)
+    public DataSourceConfig update(Long id, DataSourceConfig config) {
+        DataSourceConfig existing = repository.findById(id)
+                .orElseThrow(() -> new BaseException(SchemaResultCode.DATASOURCE_NOT_FOUND));
+        existing.setName(config.getName());
+        existing.setType(config.getType());
+        existing.setHost(config.getHost());
+        existing.setPort(config.getPort());
+        existing.setDatabaseNames(config.getDatabaseNames());
+        existing.setUsername(config.getUsername());
+        if (config.getPasswordEncrypted() != null && !config.getPasswordEncrypted().isBlank()) {
+            existing.setPasswordEncrypted(config.getPasswordEncrypted());
+        }
+        return repository.save(existing);
+    }
+
+    /** 读已持久化的表名列表（按数据库名分组）。 */
     @Cacheable(cacheNames = CacheNames.SCHEMA_TABLES, key = "#dataSourceId")
-    public List<String> scanTables(Long dataSourceId) {
+    public Map<String, List<String>> scanTables(Long dataSourceId) {
         return tableListCacheRepository.findByDataSourceId(dataSourceId)
-                .map(c -> readList(c.getTableJson(), new TypeReference<List<String>>() {}))
-                .orElseGet(List::of);
+                .map(c -> readMap(c.getTableJson()))
+                .orElseGet(LinkedHashMap::new);
     }
 
     /** 读已持久化的单表结构详情（由扫描写入 schema_cache）。 */
-    @Cacheable(cacheNames = CacheNames.SCHEMA_TABLE, key = "#dataSourceId + ':' + #tableName")
-    public TableSchemaDTO getTableDetail(Long dataSourceId, String tableName) {
+    @Cacheable(cacheNames = CacheNames.SCHEMA_TABLE, key = "#dataSourceId + ':' + #databaseName + ':' + #tableName")
+    public TableSchemaDTO getTableDetail(Long dataSourceId, String databaseName, String tableName) {
         SchemaCache cache = schemaCacheRepository
-                .findByDataSourceIdAndTableName(dataSourceId, tableName)
+                .findByDataSourceIdAndDatabaseNameAndTableName(dataSourceId, databaseName, tableName)
                 .orElseThrow(() -> new BaseException(SchemaResultCode.DATASOURCE_NOT_FOUND));
         return toDto(cache);
     }
@@ -111,6 +126,18 @@ public class DataSourceService {
         }
         try {
             return objectMapper.readValue(json, ref);
+        } catch (JsonProcessingException e) {
+            throw new BaseException(SchemaResultCode.SCAN_EXECUTE_FAILED,
+                    SchemaResultCode.SCAN_EXECUTE_FAILED.getMessage(), e);
+        }
+    }
+
+    private Map<String, List<String>> readMap(String json) {
+        if (json == null || json.isBlank()) {
+            return new LinkedHashMap<>();
+        }
+        try {
+            return objectMapper.readValue(json, new TypeReference<LinkedHashMap<String, List<String>>>() {});
         } catch (JsonProcessingException e) {
             throw new BaseException(SchemaResultCode.SCAN_EXECUTE_FAILED,
                     SchemaResultCode.SCAN_EXECUTE_FAILED.getMessage(), e);

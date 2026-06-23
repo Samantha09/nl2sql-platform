@@ -21,6 +21,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -51,7 +52,7 @@ class SchemaScanServiceTest {
         d.setType("mysql");
         d.setHost("localhost");
         d.setPort(3306);
-        d.setDatabaseName("shop");
+        d.setDatabaseNames(List.of("shop"));
         d.setUsername("u");
         d.setPasswordEncrypted("plainpwd"); // 非 ENC()，按明文处理，避免依赖环境密钥
         return d;
@@ -67,20 +68,21 @@ class SchemaScanServiceTest {
     }
 
     @Test
-    @DisplayName("scan 解析类型→调度 scanner→持久化 schema_cache 与 table_list_cache，返回表名")
+    @DisplayName("scan 解析类型→调度 scanner→持久化 schema_cache 与 table_list_cache，返回按库分组的表名")
     void shouldScanAndPersist() {
         when(dataSourceRepository.findById(1L)).thenReturn(Optional.of(ds()));
         when(scannerRegistry.resolve(DbType.MYSQL)).thenReturn(scanner);
         when(scanner.scan(any())).thenReturn(oneTable());
-        when(schemaCacheRepository.findByDataSourceIdAndTableName(1L, "users"))
+        when(schemaCacheRepository.findByDataSourceIdAndDatabaseNameAndTableName(1L, "shop", "users"))
                 .thenReturn(Optional.empty());
         when(schemaCacheRepository.findByDataSourceId(1L)).thenReturn(List.of());
 
-        List<String> tables = service.scan(1L);
+        Map<String, List<String>> tables = service.scan(1L);
 
-        assertThat(tables).containsExactly("users");
+        assertThat(tables).containsEntry("shop", List.of("users"));
         ArgumentCaptor<SchemaCache> cap = ArgumentCaptor.forClass(SchemaCache.class);
         verify(schemaCacheRepository).save(cap.capture());
+        assertThat(cap.getValue().getDatabaseName()).isEqualTo("shop");
         assertThat(cap.getValue().getTableName()).isEqualTo("users");
         assertThat(cap.getValue().getVersion()).isEqualTo(1);
         verify(tableListCacheRepository).save(any(TableListCache.class));
@@ -91,12 +93,13 @@ class SchemaScanServiceTest {
     void shouldBumpVersionOnRescan() {
         SchemaCache existing = new SchemaCache();
         existing.setDataSourceId(1L);
+        existing.setDatabaseName("shop");
         existing.setTableName("users");
         existing.setVersion(3);
         when(dataSourceRepository.findById(1L)).thenReturn(Optional.of(ds()));
         when(scannerRegistry.resolve(DbType.MYSQL)).thenReturn(scanner);
         when(scanner.scan(any())).thenReturn(oneTable());
-        when(schemaCacheRepository.findByDataSourceIdAndTableName(1L, "users"))
+        when(schemaCacheRepository.findByDataSourceIdAndDatabaseNameAndTableName(1L, "shop", "users"))
                 .thenReturn(Optional.of(existing));
         when(schemaCacheRepository.findByDataSourceId(1L)).thenReturn(List.of(existing));
 

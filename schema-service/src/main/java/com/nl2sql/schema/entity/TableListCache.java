@@ -5,7 +5,7 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 
-/** 映射 table_list_cache：每数据源一行表名列表 JSON。 */
+/** 映射 table_list_cache：每数据源一行，表名按数据库分组以 JSON Map 存储。 */
 @Data
 @Entity
 @Table(name = "table_list_cache")
@@ -19,7 +19,7 @@ public class TableListCache {
     @Column(name = "data_source_id", nullable = false)
     private Long dataSourceId;
 
-    /** 表名列表 JSON（List&lt;String&gt; 序列化） */
+    /** 表名分组 JSON（Map&lt;databaseName, List&lt;tableName&gt;&gt; 序列化） */
     @Column(name = "table_json", columnDefinition = "TEXT")
     private String tableJson;
 

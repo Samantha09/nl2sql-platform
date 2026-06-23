@@ -8,7 +8,9 @@ import java.util.Optional;
 
 public interface SchemaCacheRepository extends JpaRepository<SchemaCache, Long> {
 
-    Optional<SchemaCache> findByDataSourceIdAndTableName(Long dataSourceId, String tableName);
+    Optional<SchemaCache> findByDataSourceIdAndDatabaseNameAndTableName(Long dataSourceId, String databaseName, String tableName);
+
+    List<SchemaCache> findByDataSourceIdAndDatabaseName(Long dataSourceId, String databaseName);
 
     List<SchemaCache> findByDataSourceId(Long dataSourceId);
 }

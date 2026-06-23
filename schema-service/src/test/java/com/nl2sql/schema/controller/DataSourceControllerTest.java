@@ -14,6 +14,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
@@ -60,6 +61,24 @@ class DataSourceControllerTest {
     }
 
     @Test
+    @DisplayName("PUT /api/schema/datasource/{id} 应返回更新后的数据源")
+    void shouldUpdateDataSource() throws Exception {
+        DataSourceConfig config = new DataSourceConfig();
+        config.setId(1L);
+        config.setName("订单库新名");
+        config.setType("mysql");
+
+        when(dataSourceService.update(any(), any(DataSourceConfig.class))).thenReturn(config);
+
+        mockMvc.perform(put("/api/schema/datasource/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(config)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.name").value("订单库新名"));
+    }
+
+    @Test
     @DisplayName("GET /api/schema/datasource/list 应返回数据源列表")
     void shouldListDataSources() throws Exception {
         DataSourceConfig config = new DataSourceConfig();
@@ -84,15 +103,15 @@ class DataSourceControllerTest {
     }
 
     @Test
-    @DisplayName("POST /api/schema/scan/{id} 应触发真实扫描并返回表名")
+    @DisplayName("POST /api/schema/scan/{id} 应触发真实扫描并返回按库分组的表名")
     void shouldTriggerRealScan() throws Exception {
-        when(scanService.scan(1L)).thenReturn(List.of("users", "orders"));
+        when(scanService.scan(1L)).thenReturn(Map.of("shop", List.of("users", "orders")));
 
         mockMvc.perform(post("/api/schema/scan/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data[0]").value("users"))
-                .andExpect(jsonPath("$.data[1]").value("orders"));
+                .andExpect(jsonPath("$.data.shop[0]").value("users"))
+                .andExpect(jsonPath("$.data.shop[1]").value("orders"));
 
         verify(scanService).scan(1L);
     }

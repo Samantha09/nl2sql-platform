@@ -20,9 +20,10 @@ class SchemaCacheRepositoryTest {
     @Autowired
     private SchemaCacheRepository repository;
 
-    private SchemaCache cache(Long dsId, String table) {
+    private SchemaCache cache(Long dsId, String databaseName, String table) {
         SchemaCache c = new SchemaCache();
         c.setDataSourceId(dsId);
+        c.setDatabaseName(databaseName);
         c.setTableName(table);
         c.setTableComment("注释");
         c.setColumnJson("[]");
@@ -36,22 +37,24 @@ class SchemaCacheRepositoryTest {
     }
 
     @Test
-    @DisplayName("按数据源+表名查询命中")
-    void shouldFindByDataSourceAndTable() {
-        repository.save(cache(1L, "users"));
+    @DisplayName("按数据源+数据库+表名查询命中")
+    void shouldFindByDataSourceAndDatabaseAndTable() {
+        repository.save(cache(1L, "shop", "users"));
 
-        Optional<SchemaCache> found = repository.findByDataSourceIdAndTableName(1L, "users");
+        Optional<SchemaCache> found = repository.findByDataSourceIdAndDatabaseNameAndTableName(1L, "shop", "users");
 
         assertThat(found).isPresent();
         assertThat(found.get().getPrimaryKeyJson()).isEqualTo("[\"id\"]");
     }
 
     @Test
-    @DisplayName("按数据源列出全部表缓存")
-    void shouldListByDataSource() {
-        repository.save(cache(2L, "a"));
-        repository.save(cache(2L, "b"));
+    @DisplayName("按数据源+数据库列出全部表缓存")
+    void shouldListByDataSourceAndDatabase() {
+        repository.save(cache(2L, "db1", "a"));
+        repository.save(cache(2L, "db1", "b"));
+        repository.save(cache(2L, "db2", "c"));
 
-        assertThat(repository.findByDataSourceId(2L)).hasSize(2);
+        assertThat(repository.findByDataSourceIdAndDatabaseName(2L, "db1")).hasSize(2);
+        assertThat(repository.findByDataSourceIdAndDatabaseName(2L, "db2")).hasSize(1);
     }
 }
