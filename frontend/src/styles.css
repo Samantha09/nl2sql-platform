@@ -224,6 +224,68 @@ svg.chart { width: 100%; height: 230px; display: block; }
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); animation: fade 0.2s ease;
 }
 
+/* ---------- 数据源管理 Modal ---------- */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.55);
+  display: grid; place-items: center; z-index: 90;
+  animation: fade 0.2s ease;
+}
+.modal {
+  background: var(--bg-soft); border: 1px solid var(--line); border-radius: var(--radius-lg);
+  width: 420px; max-width: calc(100vw - 32px); max-height: calc(100vh - 32px);
+  display: flex; flex-direction: column; box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+}
+.modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 18px 14px; border-bottom: 1px solid var(--line);
+}
+.modal-head h3 { font-size: 15px; font-weight: 600; }
+.modal-close {
+  width: 28px; height: 28px; border-radius: 7px; display: grid; place-items: center;
+  color: var(--ink-3); font-size: 20px; line-height: 1;
+}
+.modal-close:hover { background: var(--bg-2); color: var(--ink); }
+.modal-body {
+  padding: 18px; display: grid; gap: 14px; overflow: auto;
+}
+.modal-body label { display: grid; gap: 6px; font-size: 12.5px; color: var(--ink-2); }
+.modal-body label span { color: var(--ink-3); }
+.modal-body input,
+.modal-body select {
+  background: var(--bg-2); border: 1px solid var(--line-2); border-radius: 8px;
+  padding: 10px 12px; color: var(--ink); font-size: 13.5px; outline: none; transition: 0.15s;
+}
+.modal-body input:focus,
+.modal-body select:focus { border-color: var(--emerald); box-shadow: 0 0 0 3px rgba(62, 207, 142, 0.14); }
+.modal-body select { appearance: none; cursor: pointer; }
+.modal-foot {
+  display: flex; justify-content: flex-end; gap: 10px;
+  padding: 14px 18px 16px; border-top: 1px solid var(--line);
+}
+.btn-ghost {
+  background: transparent; border: 1px solid var(--line-2); color: var(--ink-2);
+  padding: 0 16px; border-radius: 8px; font-size: 13px; font-weight: 500;
+}
+.btn-ghost:hover { background: var(--bg-2); color: var(--ink); }
+.btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ---------- 对象树数据源入口 ---------- */
+.objtree-head { gap: 10px; }
+.objtree-head .ds-select {
+  flex: 1; min-width: 0; background: var(--bg-2); border: 1px solid var(--line-2);
+  border-radius: 6px; padding: 4px 8px; color: var(--ink); font-size: 12px;
+  outline: none; cursor: pointer;
+}
+.objtree-head .ds-select:focus { border-color: var(--emerald); }
+.objtree-head .ds-actions { display: flex; align-items: center; gap: 6px; }
+.objtree-head .ds-actions button {
+  width: 22px; height: 22px; border-radius: 5px; display: grid; place-items: center;
+  color: var(--ink-3); transition: 0.12s;
+}
+.objtree-head .ds-actions button:hover { background: var(--bg-2); color: var(--ink); }
+.objtree-head .ds-actions .add { font-size: 16px; }
+.objtree-head .ds-actions .del:hover { background: rgba(239, 68, 68, 0.12); color: #ef4444; }
+
 /* ============ 响应式：平板 ============ */
 @media (max-width: 1024px) {
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
