@@ -54,20 +54,22 @@ export interface DataSourceConfig {
   type: string;
   host: string;
   port: number;
-  databaseName: string;
+  /** 该数据源关联的数据库名列表 */
+  databaseNames: string[];
   /** 用户名（列表接口会返回） */
   username?: string;
 }
 
-/** 新增数据源的表单入参（password 明文，后端按需加密存储） */
+/** 新增/编辑数据源的表单入参（password 明文，后端按需加密存储） */
 export interface DataSourceInput {
   name: string;
   type: string;
   host: string;
   port: number;
-  databaseName: string;
+  /** 关联的数据库名列表 */
+  databaseNames: string[];
   username: string;
-  /** 明文密码，提交到后端 passwordEncrypted 字段 */
+  /** 明文密码，编辑时若为空则保持原密码不变 */
   passwordEncrypted: string;
 }
 

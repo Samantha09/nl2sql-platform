@@ -284,7 +284,30 @@ svg.chart { width: 100%; height: 230px; display: block; }
 }
 .objtree-head .ds-actions button:hover { background: var(--bg-2); color: var(--ink); }
 .objtree-head .ds-actions .add { font-size: 16px; }
+.objtree-head .ds-actions .edit:hover { background: var(--bg-soft); color: var(--emerald); }
 .objtree-head .ds-actions .del:hover { background: rgba(239, 68, 68, 0.12); color: #ef4444; }
+
+/* ---------- Tag 输入框（用于多数据库名） ---------- */
+.tag-input {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  background: var(--bg-2); border: 1px solid var(--line-2); border-radius: 8px;
+  padding: 7px 9px; min-height: 40px;
+}
+.tag-input:focus-within { border-color: var(--emerald); box-shadow: 0 0 0 3px rgba(62, 207, 142, 0.14); }
+.tag-input .tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--bg-soft); border: 1px solid var(--line); border-radius: 5px;
+  padding: 3px 7px; font-size: 12.5px; color: var(--ink);
+}
+.tag-input .tag button {
+  width: 14px; height: 14px; border-radius: 3px; display: grid; place-items: center;
+  color: var(--ink-3); font-size: 11px;
+}
+.tag-input .tag button:hover { background: var(--line); color: var(--ink); }
+.tag-input input {
+  flex: 1; min-width: 80px; background: transparent; border: none; padding: 4px 2px;
+  color: var(--ink); font-size: 13.5px; outline: none;
+}
 
 /* ============ 响应式：平板 ============ */
 @media (max-width: 1024px) {

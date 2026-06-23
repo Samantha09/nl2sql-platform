@@ -1,8 +1,8 @@
 import { useStore } from '../lib/store';
 
 export default function SchemaView() {
-  const { curTable, curMode, selectMode, details, schemaSource, schemaLoading } = useStore();
-  const t = details[curTable];
+  const { curTable, curMode, curDatabase, selectMode, details, schemaSource, schemaLoading } = useStore();
+  const t = details[curDatabase]?.[curTable];
 
   if (!t) {
     return (

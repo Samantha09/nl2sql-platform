@@ -72,6 +72,8 @@ export const http = {
     request<T>(path, { method: 'GET', params, signal }),
   post: <T>(path: string, body?: unknown, opts?: Omit<RequestOptions, 'method' | 'body'>) =>
     request<T>(path, { ...opts, method: 'POST', body }),
+  put: <T>(path: string, body?: unknown, opts?: Omit<RequestOptions, 'method' | 'body'>) =>
+    request<T>(path, { ...opts, method: 'PUT', body }),
   del: <T>(path: string, params?: RequestOptions['params']) =>
     request<T>(path, { method: 'DELETE', params }),
 };
