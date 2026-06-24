@@ -4,6 +4,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nl2sql.common.cache.CacheNames;
+import com.nl2sql.common.dto.DataSourceConnectionDTO;
+import com.nl2sql.common.dto.SchemaContextDTO;
+import com.nl2sql.common.encrypt.SecureConfigEncryptor;
 import com.nl2sql.common.exception.BaseException;
 import com.nl2sql.schema.dto.TableSchemaDTO;
 import com.nl2sql.schema.entity.DataSourceConfig;
@@ -77,6 +80,55 @@ public class DataSourceService {
                 .findByDataSourceIdAndDatabaseNameAndTableName(dataSourceId, databaseName, tableName)
                 .orElseThrow(() -> new BaseException(SchemaResultCode.DATASOURCE_NOT_FOUND));
         return toDto(cache);
+    }
+
+    /** 内部接口：返回解密后的目标库连接信息，供 query-service 建连执行。 */
+    public DataSourceConnectionDTO getConnection(Long dataSourceId) {
+        DataSourceConfig ds = repository.findById(dataSourceId)
+                .orElseThrow(() -> new BaseException(SchemaResultCode.DATASOURCE_NOT_FOUND));
+        DataSourceConnectionDTO dto = new DataSourceConnectionDTO();
+        dto.setType(ds.getType());
+        dto.setHost(ds.getHost());
+        dto.setPort(ds.getPort());
+        dto.setDatabaseNames(ds.getDatabaseNames());
+        dto.setUsername(ds.getUsername());
+        dto.setPassword(decryptPassword(ds.getPasswordEncrypted()));
+        return dto;
+    }
+
+    /** 内部接口：从已持久化的 schema_cache 组装精简 schema，供 ai-service 喂 LLM。 */
+    public SchemaContextDTO getSchemaContext(Long dataSourceId, String databaseName) {
+        List<SchemaCache> caches = schemaCacheRepository
+                .findByDataSourceIdAndDatabaseName(dataSourceId, databaseName);
+        SchemaContextDTO dto = new SchemaContextDTO();
+        dto.setDatabase(databaseName);
+        dto.setTables(caches.stream().map(this::toTableBrief).toList());
+        return dto;
+    }
+
+    private SchemaContextDTO.TableBrief toTableBrief(SchemaCache cache) {
+        SchemaContextDTO.TableBrief brief = new SchemaContextDTO.TableBrief();
+        brief.setTableName(cache.getTableName());
+        brief.setTableComment(cache.getTableComment());
+        List<ColumnMetadata> cols = readList(cache.getColumnJson(),
+                new TypeReference<List<ColumnMetadata>>() {});
+        brief.setColumns(cols.stream().map(this::toColumnBrief).toList());
+        return brief;
+    }
+
+    private SchemaContextDTO.ColumnBrief toColumnBrief(ColumnMetadata m) {
+        SchemaContextDTO.ColumnBrief c = new SchemaContextDTO.ColumnBrief();
+        c.setName(m.getName());
+        c.setType(m.getType());
+        c.setComment(m.getComment());
+        return c;
+    }
+
+    private String decryptPassword(String stored) {
+        if (SecureConfigEncryptor.isEncrypted(stored)) {
+            return SecureConfigEncryptor.decrypt(stored, SecureConfigEncryptor.getKeyFromEnv());
+        }
+        return stored;
     }
 
     private TableSchemaDTO toDto(SchemaCache cache) {
