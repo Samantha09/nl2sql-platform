@@ -1,8 +1,8 @@
 package com.nl2sql.ai.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nl2sql.ai.dto.ConvertRequest;
-import com.nl2sql.ai.service.MockLLMService;
+import com.nl2sql.ai.service.Nl2SqlConvertService;
+import com.nl2sql.common.dto.ConvertRequest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +12,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -29,7 +30,7 @@ class AiControllerTest {
     private ObjectMapper objectMapper;
 
     @MockBean
-    private MockLLMService mockLLMService;
+    private Nl2SqlConvertService convertService;
 
     @Test
     @DisplayName("POST /api/ai/convert 应返回转换后的 SQL")
@@ -38,7 +39,7 @@ class AiControllerTest {
         request.setDataSourceId(1L);
         request.setNaturalLanguage("本月销售额");
 
-        when(mockLLMService.convert("本月销售额", 1L))
+        when(convertService.convert(any(ConvertRequest.class)))
                 .thenReturn("SELECT product_name, SUM(amount) FROM orders GROUP BY product_name");
 
         mockMvc.perform(post("/api/ai/convert")
