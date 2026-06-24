@@ -1,6 +1,8 @@
 package com.nl2sql.schema.controller;
 
 import com.nl2sql.common.R;
+import com.nl2sql.common.dto.DataSourceConnectionDTO;
+import com.nl2sql.common.dto.SchemaContextDTO;
 import com.nl2sql.common.cache.CacheNames;
 import com.nl2sql.schema.dto.TableSchemaDTO;
 import com.nl2sql.schema.entity.DataSourceConfig;
@@ -63,5 +65,17 @@ public class DataSourceController {
                                             @PathVariable String databaseName,
                                             @PathVariable String tableName) {
         return R.ok(service.getTableDetail(datasourceId, databaseName, tableName));
+    }
+
+    /** 内部接口：返回解密后的连接信息（仅服务间调用，鉴权后置）。 */
+    @GetMapping("/internal/datasource/{id}/connection")
+    public R<DataSourceConnectionDTO> connection(@PathVariable Long id) {
+        return R.ok(service.getConnection(id));
+    }
+
+    /** 内部接口：返回精简 schema 上下文（仅服务间调用，鉴权后置）。 */
+    @GetMapping("/internal/datasource/{id}/schema")
+    public R<SchemaContextDTO> schema(@PathVariable Long id, @RequestParam String database) {
+        return R.ok(service.getSchemaContext(id, database));
     }
 }
