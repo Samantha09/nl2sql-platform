@@ -35,6 +35,13 @@ nl2sql:
     initial-interval: 1000
     multiplier: 2.0
     max-interval: 10000
+  llm:
+    base-url: https://api.minimaxi.com/anthropic
+    api-key: ${MINIMAX_API_KEY:}
+    model: MiniMax-M2.7
+    max-tokens: 1024
+    timeout: 30s
+    fallback-to-mock: false
 
 management:
   endpoints:
