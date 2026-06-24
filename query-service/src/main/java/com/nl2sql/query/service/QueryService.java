@@ -1,15 +1,20 @@
 package com.nl2sql.query.service;
 
-import com.nl2sql.common.cache.CacheNames;
 import com.nl2sql.common.PageResult;
-import com.nl2sql.common.event.NL2SQLEvent;
-import com.nl2sql.common.mq.MqConst;
+import com.nl2sql.common.cache.CacheNames;
+import com.nl2sql.common.dto.ConvertRequest;
+import com.nl2sql.common.dto.DataSourceConnectionDTO;
+import com.nl2sql.common.enums.ResultCode;
+import com.nl2sql.common.exception.BaseException;
+import com.nl2sql.common.feign.AiServiceClient;
+import com.nl2sql.common.feign.SchemaServiceClient;
 import com.nl2sql.query.dto.QueryRequest;
 import com.nl2sql.query.dto.QueryResult;
 import com.nl2sql.query.entity.QueryHistory;
+import com.nl2sql.query.executor.SqlExecutor;
+import com.nl2sql.query.exception.QueryResultCode;
 import com.nl2sql.query.repository.QueryHistoryRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
@@ -17,41 +22,52 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class QueryService {
 
-    private final RabbitTemplate rabbitTemplate;
+    private final AiServiceClient aiServiceClient;
+    private final SchemaServiceClient schemaServiceClient;
+    private final SqlExecutor sqlExecutor;
     private final QueryHistoryRepository historyRepository;
 
+    /** 同步真实链路：取连接 → 确定 database → LLM 生成 SQL → 执行 → 存历史。 */
     public QueryResult queryByNaturalLanguage(QueryRequest request) {
-        NL2SQLEvent event = new NL2SQLEvent();
-        event.setEventId(UUID.randomUUID().toString());
-        event.setUserId(request.getUserId());
-        event.setDataSourceId(request.getDataSourceId());
-        event.setNaturalLanguage(request.getNaturalLanguage());
-        event.setConversationId(request.getConversationId());
-        event.setTimestamp(System.currentTimeMillis());
+        DataSourceConnectionDTO conn = schemaServiceClient
+                .getConnection(request.getDataSourceId()).getData();
+        String database = resolveDatabase(request, conn);
 
-        rabbitTemplate.convertAndSend(MqConst.Nl2Sql.EXCHANGE, MqConst.Nl2Sql.ROUTING_KEY, event);
+        ConvertRequest convertReq = new ConvertRequest();
+        convertReq.setDataSourceId(request.getDataSourceId());
+        convertReq.setNaturalLanguage(request.getNaturalLanguage());
+        convertReq.setDatabaseName(database);
+        String sql = aiServiceClient.convert(convertReq).getData();
 
-        // 骨架阶段：同步返回 Mock 结果
-        QueryResult result = new QueryResult();
-        result.setSql("SELECT * FROM orders LIMIT 100;");
-        result.setData(List.of(
-            Map.of("id", 1, "product_name", "华为Mate60", "amount", 1234567),
-            Map.of("id", 2, "product_name", "iPhone15", "amount", 987654)
-        ));
-        result.setTotalCount(2);
-        result.setExecuteTimeMs(120L);
-        result.setChartType("table");
-
+        QueryResult result = sqlExecutor.execute(conn, database, sql);
         saveHistory(request, result, null);
         return result;
     }
 
+    /** 解析目标库：显式指定优先；否则数据源唯一库自动选用；多库报错。 */
+    private String resolveDatabase(QueryRequest request, DataSourceConnectionDTO conn) {
+        if (request.getDatabaseName() != null && !request.getDatabaseName().isBlank()) {
+            return request.getDatabaseName();
+        }
+        List<String> dbs = conn.getDatabaseNames();
+        if (dbs == null || dbs.isEmpty()) {
+            throw new BaseException(ResultCode.BAD_REQUEST, "数据源未配置任何库");
+        }
+        if (dbs.size() == 1) {
+            return dbs.get(0);
+        }
+        throw new BaseException(QueryResultCode.QUERY_DATABASE_NOT_SPECIFIED);
+    }
+
+    /** 直接执行 SQL（本轮保留原行为，未接真实执行——后续可扩展）。 */
     public QueryResult queryBySql(String sql) {
         QueryResult result = new QueryResult();
         result.setSql(sql);
@@ -81,7 +97,6 @@ public class QueryService {
             condition = "#request.conversationId != null")
     void saveHistory(QueryRequest request, QueryResult result, String error) {
         QueryHistory h = new QueryHistory();
-        // 非空字段兜底：匿名/无会话/未指定数据源时填默认值，避免违反非空约束
         h.setConversationId(request.getConversationId() != null
                 ? request.getConversationId() : UUID.randomUUID().toString());
         h.setUserId(request.getUserId() != null ? request.getUserId() : 0L);
