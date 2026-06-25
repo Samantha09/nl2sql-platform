@@ -44,6 +44,20 @@ class Nl2SqlConvertServiceTest {
     }
 
     @Test
+    @DisplayName("convert 应清理 LLM 返回的 markdown 代码块")
+    void shouldStripMarkdownCodeBlock() {
+        ConvertRequest req = new ConvertRequest();
+        req.setDataSourceId(1L);
+        req.setNaturalLanguage("查销售额");
+        req.setDatabaseName("shop");
+        when(schemaContextBuilder.build(1L, "shop")).thenReturn("ctx");
+        when(llmClient.chat("ctx", "查销售额"))
+                .thenReturn("```sql\nSELECT * FROM orders;\n```");
+
+        assertThat(service.convert(req)).isEqualTo("SELECT * FROM orders;");
+    }
+
+    @Test
     @DisplayName("LLM 异常且 fallbackToMock=true 时降级到 MockLLMService")
     void shouldFallbackToMockWhenEnabled() {
         properties.setFallbackToMock(true);
