@@ -170,8 +170,8 @@ table.data td.num { font-family: var(--mono); color: var(--ink); }
 .data-note { font-size: 12px; color: var(--ink-3); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
 
 /* 智能查询 */
-.query-chat { display: flex; flex-direction: column; height: 100%; gap: 16px; }
-.chat-messages { flex: 1; overflow-y: auto; padding-right: 6px; display: flex; flex-direction: column; gap: 18px; }
+.query-chat { display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 16px; }
+.chat-messages { flex: 1; overflow-y: auto; padding-right: 6px; display: flex; flex-direction: column; gap: 18px; min-height: 0; }
 .chat-input-area { flex-shrink: 0; margin-bottom: 0; }
 .chat-turn { display: flex; flex-direction: column; gap: 10px; animation: fade 0.3s ease; }
 .chat-msg { display: flex; align-items: flex-end; gap: 10px; }
