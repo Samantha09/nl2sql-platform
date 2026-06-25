@@ -37,6 +37,8 @@ public class QueryService {
     private final QueryHistoryRepository historyRepository;
 
     /** 同步真实链路：取连接 → 确定 database → 意图识别 → 生成/回复 → 执行 → 存历史。 */
+    @CacheEvict(cacheNames = CacheNames.QUERY_HISTORY, key = "#request.conversationId",
+            condition = "#request.conversationId != null")
     public QueryResult queryByNaturalLanguage(QueryRequest request) {
         DataSourceConnectionDTO conn = schemaServiceClient
                 .getConnection(request.getDataSourceId()).getData();
@@ -62,7 +64,21 @@ public class QueryService {
             result.setExecuteTimeMs(0L);
             result.setChartType("table");
         }
-        saveHistory(request, result, convertResp.getType());
+
+        QueryHistory h = new QueryHistory();
+        h.setConversationId(request.getConversationId() != null
+                ? request.getConversationId() : UUID.randomUUID().toString());
+        h.setUserId(request.getUserId() != null ? request.getUserId() : 0L);
+        h.setDataSourceId(request.getDataSourceId() != null ? request.getDataSourceId() : 0L);
+        h.setNaturalLanguage(request.getNaturalLanguage());
+        h.setGeneratedSql(result.getSql());
+        h.setSqlExecuted(result.getSql());
+        h.setExecuteTimeMs(result.getExecuteTimeMs());
+        h.setResultCount(result.getTotalCount());
+        h.setStatus(convertResp.getType());
+        h.setChartType(result.getChartType());
+        historyRepository.save(h);
+
         return result;
     }
 
@@ -104,24 +120,5 @@ public class QueryService {
         Page<QueryHistory> page = historyRepository
                 .findByConversationIdOrderByCreatedAtDesc(conversationId, pageable);
         return PageResult.of(page.getContent(), page.getTotalElements(), pageNum, pageSize);
-    }
-
-    /** 写入历史后清除该会话缓存，保证下次读取最新 */
-    @CacheEvict(cacheNames = CacheNames.QUERY_HISTORY, key = "#request.conversationId",
-            condition = "#request.conversationId != null")
-    void saveHistory(QueryRequest request, QueryResult result, String intentType) {
-        QueryHistory h = new QueryHistory();
-        h.setConversationId(request.getConversationId() != null
-                ? request.getConversationId() : UUID.randomUUID().toString());
-        h.setUserId(request.getUserId() != null ? request.getUserId() : 0L);
-        h.setDataSourceId(request.getDataSourceId() != null ? request.getDataSourceId() : 0L);
-        h.setNaturalLanguage(request.getNaturalLanguage());
-        h.setGeneratedSql(result.getSql());
-        h.setSqlExecuted(result.getSql());
-        h.setExecuteTimeMs(result.getExecuteTimeMs());
-        h.setResultCount(result.getTotalCount());
-        h.setStatus(intentType);
-        h.setChartType(result.getChartType());
-        historyRepository.save(h);
     }
 }
