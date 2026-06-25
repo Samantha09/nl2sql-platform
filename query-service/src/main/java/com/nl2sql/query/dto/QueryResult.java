@@ -7,6 +7,8 @@ import java.util.Map;
 
 @Data
 public class QueryResult {
+    /** 响应类型：sql / chat / clarification */
+    private String type = "sql";
     private String sql;
     private List<Map<String, Object>> data;
     private Integer totalCount;

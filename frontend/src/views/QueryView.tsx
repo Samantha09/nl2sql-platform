@@ -77,12 +77,6 @@ export default function QueryView() {
     run(h.naturalLanguage);
   };
 
-  const copySql = (sql: string, btn: HTMLButtonElement) => {
-    navigator.clipboard?.writeText(sql);
-    btn.textContent = '已复制';
-    window.setTimeout(() => (btn.textContent = '复制'), 1500);
-  };
-
   return (
     <div className="query-chat">
       <div className="chat-messages">
@@ -100,21 +94,7 @@ export default function QueryView() {
             <div className="chat-msg chat-msg-ai">
               <div className="chat-avatar">✦</div>
               <div className="chat-bubble chat-bubble-ai">
-                {h.status === 'failed' ? (
-                  <div className="chat-error">执行失败：{h.errorMessage || '未知错误'}</div>
-                ) : (
-                  <>
-                    <div className="sql-block" style={{ marginBottom: 10 }}>
-                      <button className="copybtn" onClick={e => copySql(h.generatedSql, e.currentTarget)}>复制</button>
-                      <pre dangerouslySetInnerHTML={{ __html: highlightSql(h.generatedSql) }} />
-                    </div>
-                    <div className="chat-stats">
-                      <span>{h.resultCount} 行</span>
-                      <span>{h.executeTimeMs} ms</span>
-                      <button className="chat-rerun" onClick={() => rerun(h)}>↻ 重新执行</button>
-                    </div>
-                  </>
-                )}
+                <AiReply history={h} onRerun={() => rerun(h)} />
               </div>
             </div>
           </div>
@@ -155,6 +135,45 @@ export default function QueryView() {
         </div>
       </div>
     </div>
+  );
+}
+
+function AiReply({ history: h, onRerun }: { history: QueryHistory; onRerun: () => void }) {
+  const copySql = (sql: string, btn: HTMLButtonElement) => {
+    navigator.clipboard?.writeText(sql);
+    btn.textContent = '已复制';
+    window.setTimeout(() => (btn.textContent = '复制'), 1500);
+  };
+
+  if (h.status === 'failed') {
+    return <div className="chat-error">执行失败：{h.errorMessage || '未知错误'}</div>;
+  }
+
+  if (h.status === 'chat' || h.status === 'clarification') {
+    return (
+      <div className="chat-text">
+        {h.generatedSql}
+        <div className="chat-stats" style={{ marginTop: 10 }}>
+          <span>{h.status === 'chat' ? '对话' : '需要澄清'}</span>
+          <button className="chat-rerun" onClick={onRerun}>↻ 重新执行</button>
+        </div>
+      </div>
+    );
+  }
+
+  // sql 或其他：展示 SQL 与执行统计
+  return (
+    <>
+      <div className="sql-block" style={{ marginBottom: 10 }}>
+        <button className="copybtn" onClick={e => copySql(h.generatedSql, e.currentTarget)}>复制</button>
+        <pre dangerouslySetInnerHTML={{ __html: highlightSql(h.generatedSql) }} />
+      </div>
+      <div className="chat-stats">
+        <span>{h.resultCount} 行</span>
+        <span>{h.executeTimeMs} ms</span>
+        <button className="chat-rerun" onClick={onRerun}>↻ 重新执行</button>
+      </div>
+    </>
   );
 }
 

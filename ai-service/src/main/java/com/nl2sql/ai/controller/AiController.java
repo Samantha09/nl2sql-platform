@@ -3,6 +3,7 @@ package com.nl2sql.ai.controller;
 import com.nl2sql.ai.service.Nl2SqlConvertService;
 import com.nl2sql.common.R;
 import com.nl2sql.common.dto.ConvertRequest;
+import com.nl2sql.common.dto.ConvertResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -15,7 +16,7 @@ public class AiController {
     private final Nl2SqlConvertService convertService;
 
     @PostMapping("/convert")
-    public R<String> convert(@Valid @RequestBody ConvertRequest request) {
+    public R<ConvertResponse> convert(@Valid @RequestBody ConvertRequest request) {
         return R.ok(convertService.convert(request));
     }
 

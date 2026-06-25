@@ -3,6 +3,7 @@ package com.nl2sql.ai.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nl2sql.ai.service.Nl2SqlConvertService;
 import com.nl2sql.common.dto.ConvertRequest;
+import com.nl2sql.common.dto.ConvertResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,14 +41,15 @@ class AiControllerTest {
         request.setNaturalLanguage("本月销售额");
 
         when(convertService.convert(any(ConvertRequest.class)))
-                .thenReturn("SELECT product_name, SUM(amount) FROM orders GROUP BY product_name");
+                .thenReturn(ConvertResponse.sql("SELECT product_name, SUM(amount) FROM orders GROUP BY product_name"));
 
         mockMvc.perform(post("/api/ai/convert")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data")
+                .andExpect(jsonPath("$.data.type").value("sql"))
+                .andExpect(jsonPath("$.data.content")
                         .value("SELECT product_name, SUM(amount) FROM orders GROUP BY product_name"));
     }
 

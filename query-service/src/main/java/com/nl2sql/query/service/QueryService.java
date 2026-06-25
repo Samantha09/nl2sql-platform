@@ -3,6 +3,7 @@ package com.nl2sql.query.service;
 import com.nl2sql.common.PageResult;
 import com.nl2sql.common.cache.CacheNames;
 import com.nl2sql.common.dto.ConvertRequest;
+import com.nl2sql.common.dto.ConvertResponse;
 import com.nl2sql.common.dto.DataSourceConnectionDTO;
 import com.nl2sql.common.enums.ResultCode;
 import com.nl2sql.common.exception.BaseException;
@@ -35,7 +36,7 @@ public class QueryService {
     private final SqlExecutor sqlExecutor;
     private final QueryHistoryRepository historyRepository;
 
-    /** 同步真实链路：取连接 → 确定 database → LLM 生成 SQL → 执行 → 存历史。 */
+    /** 同步真实链路：取连接 → 确定 database → 意图识别 → 生成/回复 → 执行 → 存历史。 */
     public QueryResult queryByNaturalLanguage(QueryRequest request) {
         DataSourceConnectionDTO conn = schemaServiceClient
                 .getConnection(request.getDataSourceId()).getData();
@@ -45,10 +46,23 @@ public class QueryService {
         convertReq.setDataSourceId(request.getDataSourceId());
         convertReq.setNaturalLanguage(request.getNaturalLanguage());
         convertReq.setDatabaseName(database);
-        String sql = aiServiceClient.convert(convertReq).getData();
+        ConvertResponse convertResp = aiServiceClient.convert(convertReq).getData();
 
-        QueryResult result = sqlExecutor.execute(conn, database, sql);
-        saveHistory(request, result, null);
+        QueryResult result;
+        if ("sql".equalsIgnoreCase(convertResp.getType())) {
+            result = sqlExecutor.execute(conn, database, convertResp.getContent());
+            result.setType("sql");
+        } else {
+            // chat / clarification 等意图：不执行 SQL，直接返回文本回复
+            result = new QueryResult();
+            result.setType(convertResp.getType());
+            result.setSql(convertResp.getContent());
+            result.setData(List.of());
+            result.setTotalCount(0);
+            result.setExecuteTimeMs(0L);
+            result.setChartType("table");
+        }
+        saveHistory(request, result, convertResp.getType());
         return result;
     }
 
@@ -95,7 +109,7 @@ public class QueryService {
     /** 写入历史后清除该会话缓存，保证下次读取最新 */
     @CacheEvict(cacheNames = CacheNames.QUERY_HISTORY, key = "#request.conversationId",
             condition = "#request.conversationId != null")
-    void saveHistory(QueryRequest request, QueryResult result, String error) {
+    void saveHistory(QueryRequest request, QueryResult result, String intentType) {
         QueryHistory h = new QueryHistory();
         h.setConversationId(request.getConversationId() != null
                 ? request.getConversationId() : UUID.randomUUID().toString());
@@ -106,8 +120,7 @@ public class QueryService {
         h.setSqlExecuted(result.getSql());
         h.setExecuteTimeMs(result.getExecuteTimeMs());
         h.setResultCount(result.getTotalCount());
-        h.setStatus(error == null ? "success" : "failed");
-        h.setErrorMessage(error);
+        h.setStatus(intentType);
         h.setChartType(result.getChartType());
         historyRepository.save(h);
     }

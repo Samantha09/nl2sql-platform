@@ -2,15 +2,17 @@ package com.nl2sql.ai.service;
 
 import com.nl2sql.ai.config.LlmProperties;
 import com.nl2sql.ai.exception.AiResultCode;
+import com.nl2sql.ai.llm.IntentDetector;
 import com.nl2sql.ai.llm.LlmClient;
 import com.nl2sql.ai.llm.SchemaContextBuilder;
 import com.nl2sql.common.dto.ConvertRequest;
+import com.nl2sql.common.dto.ConvertResponse;
 import com.nl2sql.common.exception.BaseException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-/** NL → SQL 整合：取 schema 上下文 → 调 LLM → 失败按配置降级或报错。 */
+/** NL → SQL 整合：先判断意图 → 取 schema 上下文 → 调 LLM → 失败按配置降级或报错。 */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -20,16 +22,24 @@ public class Nl2SqlConvertService {
     private final SchemaContextBuilder schemaContextBuilder;
     private final MockLLMService mockLLMService;
     private final LlmProperties properties;
+    private final IntentDetector intentDetector;
 
-    public String convert(ConvertRequest request) {
+    public ConvertResponse convert(ConvertRequest request) {
         try {
+            // 1. 意图识别
+            IntentDetector.Result intent = intentDetector.detect(request.getNaturalLanguage());
+            if (intent.intent() != IntentDetector.Intent.QUERY) {
+                return ConvertResponse.chat(intent.response());
+            }
+
+            // 2. 生成 SQL
             String context = schemaContextBuilder.build(request.getDataSourceId(), request.getDatabaseName());
-            String sql = llmClient.chat(context, request.getNaturalLanguage());
-            return cleanSql(sql);
+            String sql = cleanSql(llmClient.chat(context, request.getNaturalLanguage()));
+            return ConvertResponse.sql(sql);
         } catch (Exception e) {
             if (properties.isFallbackToMock()) {
                 log.warn("LLM 调用失败，降级到 MockLLMService: {}", e.getMessage());
-                return mockLLMService.convert(request.getNaturalLanguage(), request.getDataSourceId());
+                return ConvertResponse.sql(mockLLMService.convert(request.getNaturalLanguage(), request.getDataSourceId()));
             }
             throw new BaseException(AiResultCode.AI_LLM_UNAVAILABLE,
                     AiResultCode.AI_LLM_UNAVAILABLE.getMessage(), e);

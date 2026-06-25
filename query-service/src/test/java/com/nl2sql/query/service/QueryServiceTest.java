@@ -3,6 +3,7 @@ package com.nl2sql.query.service;
 import com.nl2sql.common.PageResult;
 import com.nl2sql.common.R;
 import com.nl2sql.common.dto.ConvertRequest;
+import com.nl2sql.common.dto.ConvertResponse;
 import com.nl2sql.common.dto.DataSourceConnectionDTO;
 import com.nl2sql.common.feign.AiServiceClient;
 import com.nl2sql.common.feign.SchemaServiceClient;
@@ -51,7 +52,7 @@ class QueryServiceTest {
         conn.setType("mysql");
         conn.setDatabaseNames(List.of("shop"));
         when(schemaServiceClient.getConnection(1L)).thenReturn(R.ok(conn));
-        when(aiServiceClient.convert(any(ConvertRequest.class))).thenReturn(R.ok("SELECT * FROM orders;"));
+        when(aiServiceClient.convert(any(ConvertRequest.class))).thenReturn(R.ok(ConvertResponse.sql("SELECT * FROM orders;")));
 
         QueryResult exec = new QueryResult();
         exec.setSql("SELECT * FROM orders;");
@@ -67,6 +68,28 @@ class QueryServiceTest {
         ArgumentCaptor<ConvertRequest> captor = ArgumentCaptor.forClass(ConvertRequest.class);
         verify(aiServiceClient).convert(captor.capture());
         assertThat(captor.getValue().getDatabaseName()).isEqualTo("shop");
+        verify(historyRepository).save(any(QueryHistory.class));
+    }
+
+    @Test
+    @DisplayName("queryByNaturalLanguage 对 chat 意图应直接返回文本回复，不执行 SQL")
+    void shouldReturnChatReplyForChatIntent() {
+        QueryRequest request = new QueryRequest();
+        request.setDataSourceId(1L);
+        request.setNaturalLanguage("你好");
+
+        DataSourceConnectionDTO conn = new DataSourceConnectionDTO();
+        conn.setType("mysql");
+        conn.setDatabaseNames(List.of("shop"));
+        when(schemaServiceClient.getConnection(1L)).thenReturn(R.ok(conn));
+        when(aiServiceClient.convert(any(ConvertRequest.class)))
+                .thenReturn(R.ok(ConvertResponse.chat("你好！有什么可以帮你的吗？")));
+
+        QueryResult result = queryService.queryByNaturalLanguage(request);
+
+        assertThat(result.getType()).isEqualTo("chat");
+        assertThat(result.getSql()).isEqualTo("你好！有什么可以帮你的吗？");
+        assertThat(result.getTotalCount()).isEqualTo(0);
         verify(historyRepository).save(any(QueryHistory.class));
     }
 

@@ -7,7 +7,9 @@ import com.nl2sql.common.enums.IResultCode;
  */
 public enum AiResultCode implements IResultCode {
 
-    AI_LLM_UNAVAILABLE(12001, "ai.llm_unavailable", "AI 服务暂不可用");
+    AI_LLM_UNAVAILABLE(12001, "ai.llm_unavailable", "AI 服务暂不可用"),
+    AI_INTENT_UNCERTAIN(12002, "ai.intent_uncertain", "无法确定查询意图"),
+    AI_OFF_TOPIC(12003, "ai.off_topic", "问题与数据查询无关");
 
     private final Integer code;
     private final String i18nKey;

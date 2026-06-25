@@ -18,6 +18,8 @@ export interface QueryRequest {
 
 /** 对应 query-service QueryResult */
 export interface QueryResult {
+  /** 响应类型：sql / chat / clarification */
+  type: string;
   sql: string;
   data: Array<Record<string, unknown>>;
   totalCount: number;
