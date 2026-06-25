@@ -48,6 +48,19 @@ class AnthropicMessagesLlmClientTest {
     }
 
     @Test
+    @DisplayName("chat 对 thinking+text 多 content 应正确取 text 片段")
+    void shouldParseTextContentWhenThinkingPresent() {
+        server.expect(requestTo("https://api.minimaxi.com/anthropic/v1/messages"))
+                .andRespond(withSuccess(
+                        "{\"content\":[{\"type\":\"thinking\",\"thinking\":\"...\",\"signature\":\"sig\"},{\"type\":\"text\",\"text\":\"SELECT 2;\"}]}",
+                        MediaType.APPLICATION_JSON));
+
+        String sql = client.chat("你是 SQL 生成器", "查一下销售额");
+
+        assertThat(sql).isEqualTo("SELECT 2;");
+    }
+
+    @Test
     @DisplayName("chat 收到空 content 应抛 IllegalStateException")
     void shouldThrowOnEmptyContent() {
         server.expect(requestTo("https://api.minimaxi.com/anthropic/v1/messages"))

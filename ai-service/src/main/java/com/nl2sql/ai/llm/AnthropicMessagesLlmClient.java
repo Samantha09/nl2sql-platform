@@ -50,10 +50,13 @@ public class AnthropicMessagesLlmClient implements LlmClient {
         if (content == null || content.isEmpty()) {
             throw new IllegalStateException("LLM 响应 content 为空");
         }
-        Object text = content.get(0).get("text");
-        if (text == null) {
-            throw new IllegalStateException("LLM 响应 content[0].text 为空");
-        }
+        // MiniMax 等兼容端点会在 content 里先返回 type=thinking 的推理片段，
+        // 真正的文本答案在 type=text 的元素中，需要按类型过滤而非直接取第一个。
+        Object text = content.stream()
+                .filter(c -> "text".equals(c.get("type")))
+                .findFirst()
+                .map(c -> c.get("text"))
+                .orElseThrow(() -> new IllegalStateException("LLM 响应中未找到 text 类型 content"));
         return text.toString();
     }
 }
