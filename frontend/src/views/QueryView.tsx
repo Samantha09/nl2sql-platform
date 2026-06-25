@@ -11,7 +11,7 @@ type Phase = 'idle' | 'thinking' | 'empty' | 'done';
 const CHART_NAME: Record<ChartType, string> = { line: '折线图', bar: '条形图', donut: '饼图' };
 
 export default function QueryView() {
-  const { go } = useStore();
+  const { go, dsId, dbName } = useStore();
   const [input, setInput] = useState('');
   const [phase, setPhase] = useState<Phase>('idle');
   const [vm, setVm] = useState<ResultVM | null>(null);
@@ -20,12 +20,21 @@ export default function QueryView() {
   const run = async (q?: string) => {
     const text = (q ?? input).trim();
     if (!text) { setPhase('idle'); return; }
+    if (dsId == null) {
+      setNotice('请先选择一个数据源');
+      setPhase('empty');
+      return;
+    }
     setInput(text);
     setPhase('thinking');
     setNotice('');
 
     try {
-      const res = await queryApi.nlQuery({ naturalLanguage: text });
+      const res = await queryApi.nlQuery({
+        dataSourceId: dsId,
+        databaseName: dbName || undefined,
+        naturalLanguage: text,
+      });
       setVm(fromQueryResult(res));
       setPhase('done');
     } catch (e) {

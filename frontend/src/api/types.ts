@@ -11,6 +11,7 @@ export interface ApiResult<T> {
 export interface QueryRequest {
   userId?: number;
   dataSourceId?: number;
+  databaseName?: string;
   naturalLanguage: string;
   conversationId?: string;
 }
