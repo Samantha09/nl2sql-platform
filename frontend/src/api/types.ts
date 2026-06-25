@@ -47,6 +47,8 @@ export interface QueryHistory {
   status: string;
   errorMessage?: string;
   chartType: string;
+  /** 执行结果 JSON 字符串（sql 类型时有值） */
+  resultJson?: string;
   createdAt: string;
 }
 

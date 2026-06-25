@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { KB } from '../data/mock';
 import { highlightSql } from '../lib/nlsql';
 import { useStore } from '../lib/store';
@@ -170,6 +170,7 @@ function AiReply({ history: h, onRerun }: { history: QueryHistory; onRerun: () =
         <button className="copybtn" onClick={e => copySql(h.generatedSql, e.currentTarget)}>复制</button>
         <pre dangerouslySetInnerHTML={{ __html: highlightSql(h.generatedSql) }} />
       </div>
+      <ResultTable resultJson={h.resultJson} />
       <div className="chat-stats">
         <span>{h.resultCount} 行</span>
         <span>{h.executeTimeMs} ms</span>
@@ -177,6 +178,48 @@ function AiReply({ history: h, onRerun }: { history: QueryHistory; onRerun: () =
       </div>
     </>
   );
+}
+
+function ResultTable({ resultJson }: { resultJson?: string }) {
+  const rows = useMemo(() => {
+    if (!resultJson) return [];
+    try {
+      const parsed = JSON.parse(resultJson);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }, [resultJson]);
+
+  if (rows.length === 0) return null;
+  const columns = Object.keys(rows[0]);
+
+  return (
+    <div style={{ overflowX: 'auto', marginTop: 10 }}>
+      <table className="data">
+        <thead>
+          <tr>
+            {columns.map(col => <th key={col}>{col}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, i) => (
+            <tr key={i}>
+              {columns.map(col => (
+                <td key={col}>{formatCell(row[col])}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function formatCell(value: unknown) {
+  if (value === null || value === undefined) return <span style={{ color: 'var(--ink-3)' }}>NULL</span>;
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
+  return String(value);
 }
 
 function Empty({ msg }: { msg: string }) {

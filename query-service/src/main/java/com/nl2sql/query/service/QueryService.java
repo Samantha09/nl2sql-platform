@@ -15,7 +15,10 @@ import com.nl2sql.query.entity.QueryHistory;
 import com.nl2sql.query.executor.SqlExecutor;
 import com.nl2sql.query.exception.QueryResultCode;
 import com.nl2sql.query.repository.QueryHistoryRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
@@ -27,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class QueryService {
@@ -35,6 +39,7 @@ public class QueryService {
     private final SchemaServiceClient schemaServiceClient;
     private final SqlExecutor sqlExecutor;
     private final QueryHistoryRepository historyRepository;
+    private final ObjectMapper objectMapper;
 
     /** 同步真实链路：取连接 → 确定 database → 意图识别 → 生成/回复 → 执行 → 存历史。 */
     @CacheEvict(cacheNames = CacheNames.QUERY_HISTORY, key = "#request.conversationId",
@@ -77,9 +82,22 @@ public class QueryService {
         h.setResultCount(result.getTotalCount());
         h.setStatus(convertResp.getType());
         h.setChartType(result.getChartType());
+        h.setResultJson(toJson(result.getData()));
         historyRepository.save(h);
 
         return result;
+    }
+
+    private String toJson(List<Map<String, Object>> data) {
+        if (data == null || data.isEmpty()) {
+            return null;
+        }
+        try {
+            return objectMapper.writeValueAsString(data);
+        } catch (JsonProcessingException e) {
+            log.warn("执行结果序列化失败", e);
+            return null;
+        }
     }
 
     /** 解析目标库：显式指定优先；否则数据源唯一库自动选用；多库报错。 */

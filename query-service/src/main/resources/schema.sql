@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS `query_history` (
     `status` VARCHAR(20) DEFAULT 'success' COMMENT 'success/failed/timeout',
     `error_message` TEXT,
     `chart_type` VARCHAR(20) DEFAULT 'table' COMMENT 'table/line/bar/pie',
+    `result_json` TEXT COMMENT '执行结果 JSON 数组',
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX `idx_conversation` (`conversation_id`),
     INDEX `idx_user_created` (`user_id`, `created_at`)

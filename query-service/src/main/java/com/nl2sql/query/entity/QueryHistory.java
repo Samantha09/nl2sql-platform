@@ -43,4 +43,7 @@ public class QueryHistory extends BaseEntity {
 
     @Column(name = "chart_type", length = 20)
     private String chartType = "table";
+
+    @Column(name = "result_json", columnDefinition = "TEXT")
+    private String resultJson;
 }
