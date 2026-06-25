@@ -37,6 +37,9 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
   const { method = 'GET', body, params, rawText, signal } = opts;
 
   const headers: Record<string, string> = {};
+  if (method === 'GET') {
+    headers['Cache-Control'] = 'no-cache';
+  }
   let payload: BodyInit | undefined;
   if (body !== undefined) {
     if (rawText) {

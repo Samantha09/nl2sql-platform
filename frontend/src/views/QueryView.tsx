@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { KB } from '../data/mock';
 import { highlightSql } from '../lib/nlsql';
 import { useStore } from '../lib/store';
@@ -29,18 +29,20 @@ export default function QueryView() {
   });
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  const loadHistory = async () => {
+  const loadHistory = useCallback(async () => {
     try {
       const list = await queryApi.getHistory(conversationId);
       setHistory(list);
     } catch (e) {
+      const reason = e instanceof ApiError ? e.message : '后端异常';
+      setNotice(`加载聊天记录失败（${reason}）`);
       console.error('加载历史失败', e);
     }
-  };
+  }, [conversationId]);
 
   useEffect(() => {
     loadHistory();
-  }, [conversationId]);
+  }, [loadHistory]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
