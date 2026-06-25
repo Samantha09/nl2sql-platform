@@ -15,7 +15,7 @@ export default function App() {
       {view === 'schema' && <ObjectTree />}
       <main className="main">
         <Topbar />
-        <section className="view">
+        <section className={`view view-${view}`}>
           {view === 'overview' && <Overview />}
           {view === 'schema' && <SchemaView />}
           {view === 'query' && <QueryView />}

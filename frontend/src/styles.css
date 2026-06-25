@@ -136,6 +136,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .iconbtn svg { width: 14px; height: 14px; }
 
 .view { flex: 1; overflow: auto; padding: 24px; }
+.view-query { display: flex; flex-direction: column; overflow: hidden; padding: 0; }
 
 .card { background: var(--bg-soft); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 18px; }
 .card h3 { font-size: 13px; font-weight: 600; color: var(--ink-2); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
@@ -170,9 +171,12 @@ table.data td.num { font-family: var(--mono); color: var(--ink); }
 .data-note { font-size: 12px; color: var(--ink-3); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
 
 /* 智能查询 */
-.query-chat { display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 16px; }
+.query-chat { display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 16px; padding: 24px; }
 .chat-messages { flex: 1; overflow-y: auto; padding-right: 6px; display: flex; flex-direction: column; gap: 18px; min-height: 0; }
 .chat-input-area { flex-shrink: 0; margin-bottom: 0; }
+.result-table-wrap { max-height: 260px; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--radius); margin-top: 10px; }
+.result-table-wrap table.data { margin: 0; }
+.result-table-wrap table.data th { position: sticky; top: 0; background: var(--bg-soft); z-index: 1; }
 .chat-turn { display: flex; flex-direction: column; gap: 10px; animation: fade 0.3s ease; }
 .chat-msg { display: flex; align-items: flex-end; gap: 10px; }
 .chat-msg-user { align-self: flex-end; flex-direction: row-reverse; }

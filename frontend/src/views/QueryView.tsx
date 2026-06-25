@@ -195,7 +195,7 @@ function ResultTable({ resultJson }: { resultJson?: string }) {
   const columns = Object.keys(rows[0]);
 
   return (
-    <div style={{ overflowX: 'auto', marginTop: 10 }}>
+    <div className="result-table-wrap">
       <table className="data">
         <thead>
           <tr>
